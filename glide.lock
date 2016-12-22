@@ -1,0 +1,65 @@
+hash: a21f3f193dfb87c02a364589d1bd8874dc4ce1fdf59c5693cb17eb4c73424cdf
+updated: 2016-12-20T21:22:38.484575272+01:00
+imports:
+- name: github.com/aws/aws-sdk-go
+  version: 8e3cbe8bc6116511806e5627b0dbc03d5b79ce0a
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/corehandlers
+  - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/ec2metadata
+  - aws/endpoints
+  - aws/request
+  - aws/session
+  - aws/signer/v4
+  - private/protocol
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
+  - private/waiter
+  - service/s3
+  - service/sqs
+  - service/sts
+- name: github.com/didip/tollbooth
+  version: 605330a2a1a74c6535f5a4d5e8ddab4e024015c4
+  subpackages:
+  - config
+  - errors
+  - libstring
+- name: github.com/go-ini/ini
+  version: 2ba15ac2dc9cdf88c110ec2dc0ced7fa45f5678c
+- name: github.com/iotaledger/iota.lib.go
+  version: 2ddf7e49b94de430712f9749377badd986bbbaa0
+- name: github.com/jmespath/go-jmespath
+  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+- name: github.com/julienschmidt/httprouter
+  version: 5dd70ee059943e81987a817fa1a755b11dd119c1
+- name: github.com/oleiade/lane
+  version: 28f7c3f09254f12b51e620fa4db136ba58804762
+- name: github.com/satori/go.uuid
+  version: b061729afc07e77a8aa4fad0a2fd840958f1942a
+- name: github.com/uber-go/atomic
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+- name: github.com/uber-go/zap
+  version: c13eae60c163cd30de682099598d114fb3767325
+- name: github.com/urfave/negroni
+  version: cd9734011043904139c24dbad9a71b21f1586f36
+- name: golang.org/x/net
+  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
+  subpackages:
+  - context
+- name: golang.org/x/time
+  version: f51c12702a4d776e4c1fa9b0fabab841babae631
+  subpackages:
+  - rate
+testImports: []

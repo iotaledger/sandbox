@@ -1,0 +1,9 @@
+package: github.com/iotaledger/sandbox
+import:
+- package: github.com/iotaledger/iota.lib.go
+- package: github.com/julienschmidt/httprouter
+- package: github.com/satori/go.uuid
+- package: github.com/uber-go/zap
+- package: github.com/urfave/negroni
+- package: github.com/oleiade/lane
+  version: ^1.0.0
