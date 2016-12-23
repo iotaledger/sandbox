@@ -56,30 +56,36 @@ func (app *App) Worker() error {
 				continue
 			}
 
-			cmd := exec.Command(app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), j.AttachToTangleRequest.Trytes[0])
-			stdout, err := cmd.StdoutPipe()
-			if err != nil {
-				app.failJob(j, err.Error())
-				continue
+			outTrytes := []string{}
+			for _, ts := range j.AttachToTangleRequest.Trytes {
+				cmd := exec.Command(app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
+				app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
+				stdout, err := cmd.StdoutPipe()
+				if err != nil {
+					app.failJob(j, err.Error())
+					continue
+				}
+
+				if err := cmd.Start(); err != nil {
+					app.failJob(j, err.Error())
+					continue
+				}
+
+				if err := cmd.Wait(); err != nil {
+					app.failJob(j, err.Error())
+					continue
+				}
+
+				trytes, err := ioutil.ReadAll(stdout)
+				if err != nil {
+					app.failJob(j, err.Error())
+					continue
+				}
+
+				outTrytes = append(outTrytes, string(trytes))
 			}
 
-			if err := cmd.Start(); err != nil {
-				app.failJob(j, err.Error())
-				continue
-			}
-
-			if err := cmd.Wait(); err != nil {
-				app.failJob(j, err.Error())
-				continue
-			}
-
-			trytes, err := ioutil.ReadAll(stdout)
-			if err != nil {
-				app.failJob(j, err.Error())
-				continue
-			}
-
-			j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: []string{string(trytes)}}
+			j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
 			j.Status = job.JobStatusFinished
 			finishedAt := time.Now().Unix()
 			j.FinishedAt = &finishedAt

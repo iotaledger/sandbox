@@ -1,8 +1,8 @@
 hash: a21f3f193dfb87c02a364589d1bd8874dc4ce1fdf59c5693cb17eb4c73424cdf
-updated: 2016-12-20T21:22:38.484575272+01:00
+updated: 2016-12-22T20:41:02.449283841+01:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 8e3cbe8bc6116511806e5627b0dbc03d5b79ce0a
+  version: 331cc756a052a4f534a386c68ad6e646105b049d
   subpackages:
   - aws
   - aws/awserr
@@ -24,10 +24,7 @@ imports:
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
-  - private/protocol/restxml
   - private/protocol/xml/xmlutil
-  - private/waiter
-  - service/s3
   - service/sqs
   - service/sts
 - name: github.com/didip/tollbooth
@@ -37,9 +34,9 @@ imports:
   - errors
   - libstring
 - name: github.com/go-ini/ini
-  version: 2ba15ac2dc9cdf88c110ec2dc0ced7fa45f5678c
+  version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
 - name: github.com/iotaledger/iota.lib.go
-  version: 2ddf7e49b94de430712f9749377badd986bbbaa0
+  version: 4998d96e1cebcbc2edfd8908cf2d558647f4c31a
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/julienschmidt/httprouter
@@ -51,7 +48,7 @@ imports:
 - name: github.com/uber-go/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber-go/zap
-  version: c13eae60c163cd30de682099598d114fb3767325
+  version: a5783ee4b216a927da8f839c45cfbf9d694e1467
 - name: github.com/urfave/negroni
   version: cd9734011043904139c24dbad9a71b21f1586f36
 - name: golang.org/x/net

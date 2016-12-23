@@ -235,6 +235,15 @@ func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, r *h
 	}
 }
 
+func validTrytesSlice(ts []string) bool {
+	for _, t := range ts {
+		if !giota.ValidTrytes(t) {
+			return false
+		}
+	}
+	return true
+}
+
 func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
 	attr := &giota.AttachToTangleRequest{}
@@ -246,6 +255,11 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, r *http.Reques
 
 	if attr.Command != "attachToTangle" {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + attr.Command})
+		return
+	}
+
+	if len(attr.Trytes) < 1 || !validTrytesSlice(attr.Trytes) {
+		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid trytes: " + attr.Trytes})
 		return
 	}
 
