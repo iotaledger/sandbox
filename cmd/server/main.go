@@ -259,7 +259,7 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, r *http.Reques
 	}
 
 	if len(attr.Trytes) < 1 || !validTrytesSlice(attr.Trytes) {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid trytes: " + attr.Trytes})
+		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid trytes"})
 		return
 	}
 

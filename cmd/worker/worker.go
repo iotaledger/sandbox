@@ -30,6 +30,57 @@ func (app *App) failJob(j *job.IRIJob, errMsg string) {
 	app.logger.Debug("failJob enqueued", zap.String("errMsg", errMsg), zap.Object("job", j))
 }
 
+func (app *App) HandleAttachToTangle(j *job.IRIJob) {
+	if j.AttachToTangleRequest == nil {
+		app.failJob(j, "no request attachToTangleRequest supplied")
+		return
+	}
+
+	if len(j.AttachToTangleRequest.Trytes) < 1 {
+		app.failJob(j, "no trytes supplied")
+		return
+	}
+
+	outTrytes := []string{}
+	for _, ts := range j.AttachToTangleRequest.Trytes {
+		cmd := exec.Command(app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
+		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			app.failJob(j, err.Error())
+			return
+		}
+
+		if err := cmd.Start(); err != nil {
+			app.failJob(j, err.Error())
+			return
+		}
+
+		if err := cmd.Wait(); err != nil {
+			app.failJob(j, err.Error())
+			return
+		}
+
+		trytes, err := ioutil.ReadAll(stdout)
+		if err != nil {
+			app.failJob(j, err.Error())
+			return
+		}
+
+		outTrytes = append(outTrytes, string(trytes))
+	}
+
+	j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
+	j.Status = job.JobStatusFinished
+	finishedAt := time.Now().Unix()
+	j.FinishedAt = &finishedAt
+	err := app.finishedJobs.EnqueueJob(j)
+	if err != nil {
+		app.logger.Error("finished job", zap.String("method", "EnqueueJob"), zap.Error(err))
+	}
+	app.logger.Debug("new finished job enqueued")
+}
+
 func (app *App) Worker() error {
 	for {
 		j, err := app.incomingJobs.DequeueJob()
@@ -46,54 +97,7 @@ func (app *App) Worker() error {
 			app.failJob(j, fmt.Sprintf("unknown command %q", j.Command))
 			continue
 		case "attachToTangle":
-			if j.AttachToTangleRequest == nil {
-				app.failJob(j, "no request attachToTangleRequest supplied")
-				continue
-			}
-
-			if len(j.AttachToTangleRequest.Trytes) < 1 {
-				app.failJob(j, "no trytes supplied")
-				continue
-			}
-
-			outTrytes := []string{}
-			for _, ts := range j.AttachToTangleRequest.Trytes {
-				cmd := exec.Command(app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
-				app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
-				stdout, err := cmd.StdoutPipe()
-				if err != nil {
-					app.failJob(j, err.Error())
-					continue
-				}
-
-				if err := cmd.Start(); err != nil {
-					app.failJob(j, err.Error())
-					continue
-				}
-
-				if err := cmd.Wait(); err != nil {
-					app.failJob(j, err.Error())
-					continue
-				}
-
-				trytes, err := ioutil.ReadAll(stdout)
-				if err != nil {
-					app.failJob(j, err.Error())
-					continue
-				}
-
-				outTrytes = append(outTrytes, string(trytes))
-			}
-
-			j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
-			j.Status = job.JobStatusFinished
-			finishedAt := time.Now().Unix()
-			j.FinishedAt = &finishedAt
-			err = app.finishedJobs.EnqueueJob(j)
-			if err != nil {
-				app.logger.Error("finished job", zap.String("method", "EnqueueJob"), zap.Error(err))
-			}
-			app.logger.Debug("new finished job enqueued")
+			app.HandleAttachToTangle(j)
 		}
 	}
 }
