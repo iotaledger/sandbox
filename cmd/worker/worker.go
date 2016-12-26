@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -43,31 +42,19 @@ func (app *App) HandleAttachToTangle(j *job.IRIJob) {
 
 	outTrytes := []string{}
 	for _, ts := range j.AttachToTangleRequest.Trytes {
+		if !giota.ValidTrytes(ts) {
+			app.failJob(j, "invalid trytes")
+			return
+		}
 		cmd := exec.Command(app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
 		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
-		stdout, err := cmd.StdoutPipe()
+		out, err := cmd.Output()
 		if err != nil {
 			app.failJob(j, err.Error())
 			return
 		}
 
-		if err := cmd.Start(); err != nil {
-			app.failJob(j, err.Error())
-			return
-		}
-
-		if err := cmd.Wait(); err != nil {
-			app.failJob(j, err.Error())
-			return
-		}
-
-		trytes, err := ioutil.ReadAll(stdout)
-		if err != nil {
-			app.failJob(j, err.Error())
-			return
-		}
-
-		outTrytes = append(outTrytes, string(trytes))
+		outTrytes = append(outTrytes, string(out))
 	}
 
 	j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
