@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -33,7 +35,7 @@ type App struct {
 }
 
 type ErrorResp struct {
-	Message string
+	Message string `json:"message"`
 }
 
 func (app *App) writeError(w http.ResponseWriter, code int, e ErrorResp) {
@@ -46,10 +48,9 @@ func (app *App) writeError(w http.ResponseWriter, code int, e ErrorResp) {
 	}
 }
 
-func (app *App) PostCommandsGetNodeInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsGetNodeInfo(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	gnir := &giota.GetNodeInfoRequest{}
-	err := json.NewDecoder(lr).Decode(gnir)
+	err := json.Unmarshal(b, gnir)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -62,7 +63,8 @@ func (app *App) PostCommandsGetNodeInfo(w http.ResponseWriter, r *http.Request, 
 
 	gni, err := app.iriClient.GetNodeInfo()
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "GetNodeInfo"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -73,10 +75,9 @@ func (app *App) PostCommandsGetNodeInfo(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func (app *App) PostCommandsGetTips(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsGetTips(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	gtr := &giota.GetTipsRequest{}
-	err := json.NewDecoder(lr).Decode(gtr)
+	err := json.Unmarshal(b, gtr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -89,7 +90,8 @@ func (app *App) PostCommandsGetTips(w http.ResponseWriter, r *http.Request, _ ht
 
 	gt, err := app.iriClient.GetTips()
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "GetTips"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -100,10 +102,9 @@ func (app *App) PostCommandsGetTips(w http.ResponseWriter, r *http.Request, _ ht
 	}
 }
 
-func (app *App) PostCommandsFindTransactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsFindTransactions(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	ftr := &giota.FindTransactionsRequest{}
-	err := json.NewDecoder(lr).Decode(ftr)
+	err := json.Unmarshal(b, ftr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -116,7 +117,8 @@ func (app *App) PostCommandsFindTransactions(w http.ResponseWriter, r *http.Requ
 
 	ft, err := app.iriClient.FindTransactions(ftr)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "FindTransactions"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -127,10 +129,9 @@ func (app *App) PostCommandsFindTransactions(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (app *App) PostCommandsGetTrytes(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsGetTrytes(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	gtr := &giota.GetTrytesRequest{}
-	err := json.NewDecoder(lr).Decode(gtr)
+	err := json.Unmarshal(b, gtr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -143,7 +144,8 @@ func (app *App) PostCommandsGetTrytes(w http.ResponseWriter, r *http.Request, _ 
 
 	gt, err := app.iriClient.GetTrytes(gtr)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "GetTrytes"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -154,10 +156,9 @@ func (app *App) PostCommandsGetTrytes(w http.ResponseWriter, r *http.Request, _ 
 	}
 }
 
-func (app *App) PostCommandsGetInclusionStates(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsGetInclusionStates(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	gisr := &giota.GetInclusionStatesRequest{}
-	err := json.NewDecoder(lr).Decode(gisr)
+	err := json.Unmarshal(b, gisr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -170,7 +171,8 @@ func (app *App) PostCommandsGetInclusionStates(w http.ResponseWriter, r *http.Re
 
 	gis, err := app.iriClient.GetInclusionStates(gisr)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "GetInclusionStates"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -181,10 +183,9 @@ func (app *App) PostCommandsGetInclusionStates(w http.ResponseWriter, r *http.Re
 	}
 }
 
-func (app *App) PostCommandsGetBalances(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsGetBalances(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	gbr := &giota.GetBalancesRequest{}
-	err := json.NewDecoder(lr).Decode(gbr)
+	err := json.Unmarshal(b, gbr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -197,7 +198,8 @@ func (app *App) PostCommandsGetBalances(w http.ResponseWriter, r *http.Request, 
 
 	gb, err := app.iriClient.GetBalances(gbr)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "GetBalances"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -208,10 +210,9 @@ func (app *App) PostCommandsGetBalances(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	gttar := &giota.GetTransactionsToApproveRequest{}
-	err := json.NewDecoder(lr).Decode(gttar)
+	err := json.Unmarshal(b, gttar)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -224,7 +225,8 @@ func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, r *h
 
 	gtta, err := app.iriClient.GetTransactionsToApprove(gttar)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "GetTransactionsToApprove"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -244,10 +246,9 @@ func validTrytesSlice(ts []string) bool {
 	return true
 }
 
-func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	attr := &giota.AttachToTangleRequest{}
-	err := json.NewDecoder(lr).Decode(attr)
+	err := json.Unmarshal(b, attr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -285,10 +286,9 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	btr := &giota.BroadcastTransactionsRequest{}
-	err := json.NewDecoder(lr).Decode(btr)
+	err := json.Unmarshal(b, btr)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -301,7 +301,8 @@ func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, r *http
 
 	bt, err := app.iriClient.BroadcastTransactions(btr)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "BroadcastTransactions"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -312,10 +313,9 @@ func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, r *http
 	}
 }
 
-func (app *App) PostCommandsStoreTransactions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	lr := http.MaxBytesReader(w, r.Body, 8388608) // 2^23 bytes
+func (app *App) PostCommandsStoreTransactions(w http.ResponseWriter, b []byte, _ httprouter.Params) {
 	str := &giota.StoreTransactionsRequest{}
-	err := json.NewDecoder(lr).Decode(str)
+	err := json.Unmarshal(b, str)
 	if err != nil {
 		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
@@ -328,7 +328,8 @@ func (app *App) PostCommandsStoreTransactions(w http.ResponseWriter, r *http.Req
 
 	st, err := app.iriClient.StoreTransactions(str)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		app.logger.Error("iri client", zap.String("callee", "StoreTransactions"), zap.Error(err))
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
@@ -336,6 +337,52 @@ func (app *App) PostCommandsStoreTransactions(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
+	}
+}
+
+type PostCommand struct {
+	Command string `json:"command"`
+}
+
+func (app *App) PostCommands(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	lr := io.LimitReader(r.Body, 8388608) // 2^23 bytes
+	b, err := ioutil.ReadAll(lr)
+	if err != nil {
+		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		return
+	}
+
+	cmd := &PostCommand{}
+	err = json.Unmarshal(b, cmd)
+	if err != nil {
+		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		return
+	}
+
+	switch cmd.Command {
+	default:
+		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + cmd.Command})
+		return
+	case "getNodeInfo":
+		app.PostCommandsGetNodeInfo(w, b, nil)
+	case "getTips":
+		app.PostCommandsGetTips(w, b, nil)
+	case "findTransactions":
+		app.PostCommandsFindTransactions(w, b, nil)
+	case "getTrytes":
+		app.PostCommandsGetTrytes(w, b, nil)
+	case "getInclusionStates":
+		app.PostCommandsGetInclusionStates(w, b, nil)
+	case "getBalances":
+		app.PostCommandsGetBalances(w, b, nil)
+	case "getTransactionsToApprove":
+		app.PostCommandsGetTransactionsToApprove(w, b, nil)
+	case "broadcastTransactions":
+		app.PostCommandsBroadcastTransactions(w, b, nil)
+	case "storeTransactions":
+		app.PostCommandsStoreTransactions(w, b, nil)
+	case "attachToTangle":
+		app.PostCommandsAttachToTangle(w, b, nil)
 	}
 }
 
@@ -458,19 +505,8 @@ func main() {
 	app.jobStore = s
 
 	r := httprouter.New()
-	r.POST("/commands/getNodeInfo", app.PostCommandsGetNodeInfo)
-	r.POST("/commands/getTips", app.PostCommandsGetTips)
-	r.POST("/commands/findTransactions", app.PostCommandsFindTransactions)
-	r.POST("/commands/getTrytes", app.PostCommandsGetTrytes)
-	r.POST("/commands/getInclusionStates", app.PostCommandsGetInclusionStates)
-	r.POST("/commands/getBalances", app.PostCommandsGetBalances)
-	r.POST("/commands/getTransactionsToApprove", app.PostCommandsGetTransactionsToApprove)
-	r.POST("/commands/broadcastTransactions", app.PostCommandsBroadcastTransactions)
-	r.POST("/commands/storeTransactions", app.PostCommandsStoreTransactions)
-
-	r.POST("/commands/attachToTangle", app.PostCommandsAttachToTangle)
-
-	r.GET("/jobs/:id", app.GetJobsID)
+	r.POST("/api/v1/commands", app.PostCommands)
+	r.GET("/api/v1/jobs/:id", app.GetJobsID)
 
 	limiter := tollbooth.NewLimiter(60, time.Minute)
 
