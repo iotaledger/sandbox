@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -29,7 +30,7 @@ func (app *App) failJob(j *job.IRIJob, errMsg string) {
 	app.logger.Debug("failJob enqueued", zap.String("errMsg", errMsg), zap.Object("job", j))
 }
 
-func (app *App) HandleAttachToTangle(j *job.IRIJob) {
+func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 	if j.AttachToTangleRequest == nil {
 		app.failJob(j, "no request attachToTangleRequest supplied")
 		return
@@ -46,10 +47,16 @@ func (app *App) HandleAttachToTangle(j *job.IRIJob) {
 			app.failJob(j, "invalid trytes")
 			return
 		}
-		cmd := exec.Command(app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
+
+		cmd := exec.CommandContext(ctx, app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
 		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
 		out, err := cmd.Output()
 		if err != nil {
+			app.logger.Error("ccurl", zap.Error(err))
+			if err := ctx.Err(); err == context.DeadlineExceeded {
+				app.failJob(j, "job exceeded time quota")
+				return
+			}
 			app.failJob(j, err.Error())
 			return
 		}
@@ -84,13 +91,15 @@ func (app *App) Worker() error {
 			app.failJob(j, fmt.Sprintf("unknown command %q", j.Command))
 			continue
 		case "attachToTangle":
-			app.HandleAttachToTangle(j)
+			ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
+			app.HandleAttachToTangle(ctx, j)
 		}
 	}
 }
 
 type App struct {
-	ccurlPath string
+	ccurlPath    string
+	ccurlTimeout time.Duration
 
 	logger       zap.Logger
 	incomingJobs job.JobQueue
@@ -156,6 +165,12 @@ func main() {
 		app.logger.Fatal("finished job queue", zap.Error(err))
 	}
 	app.finishedJobs = fin
+
+	app.ccurlTimeout = 120 * time.Second
+	to, err := strconv.Atoi(os.Getenv("CCURL_TIMEOUT"))
+	if err != nil {
+		app.ccurlTimeout = time.Duration(to) * time.Second
+	}
 
 	// XXX: add graceful shutdown
 	app.logger.Info("starting worker")
