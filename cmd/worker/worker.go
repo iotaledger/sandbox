@@ -2,15 +2,16 @@ package main
 /*
 #cgo LDFLAGS: -L. -lccurl
 #include <ccurl/ccurl.h>
+#include <stdlib.h>
 */
 import "C"
 import (
 	"context"
 	"fmt"
 	"os"
-	//"os/exec"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"github.com/iotaledger/sandbox/job"
 
@@ -66,8 +67,10 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 			return
 		}
 		*/
+		cTrytes := C.CString(ts)
 
-		out := C.ccurl_pow(C.CString(ts), C.int(j.AttachToTangleRequest.MinWeightMagnitude))
+		out := C.ccurl_pow(cTrytes, C.int(j.AttachToTangleRequest.MinWeightMagnitude))
+		C.free(unsafe.Pointer(cTrytes))
 		outTrytes = append(outTrytes, string(C.GoString(out)))
 	}
 
