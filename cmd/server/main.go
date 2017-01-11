@@ -525,7 +525,7 @@ func main() {
 	n.Use(NewLoggerMiddleware())
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
 
-	ipLimit, err := strconv.ParseInt(os.Getenv("REQUEST_PER_MINUTES"), 10, 64)
+	ipLimit, err := strconv.ParseInt(os.Getenv("REQUESTS_PER_MINUTE"), 10, 64)
 	if err == nil && ipLimit > 0 {
 		limiter := tollbooth.NewLimiter(ipLimit, time.Minute)
 		if false {
