@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/iotaledger/sandbox/job"
@@ -18,8 +19,10 @@ import (
 	"github.com/didip/tollbooth"
 	giota "github.com/iotaledger/iota.lib.go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/uber-go/zap"
+	"github.com/uber-go/zap/zwrap"
 	"github.com/urfave/negroni"
 )
 
@@ -453,11 +456,11 @@ func main() {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
-	c := &http.Client{
+	client := &http.Client{
 		Transport: tr,
 	}
 
-	ic, err := giota.NewAPI(app.iriURI, c)
+	ic, err := giota.NewAPI(app.iriURI, client)
 	if err != nil {
 		app.logger.Fatal("initializing IRI API client", zap.Error(err))
 	}
@@ -508,13 +511,29 @@ func main() {
 	r.POST("/api/v1/commands", app.PostCommands)
 	r.GET("/api/v1/jobs/:id", app.GetJobsID)
 
-	limiter := tollbooth.NewLimiter(60, time.Minute)
+	recovLogger, err := zwrap.Standardize(app.logger, zap.ErrorLevel)
+	if err != nil {
+		app.logger.Fatal("standardize zap logger", zap.Error(err))
+	}
 
 	n := negroni.New()
-	n.Use(negroni.NewRecovery())
+
+	recov := negroni.NewRecovery()
+	recov.PrintStack = false
+	recov.Logger = recovLogger
+	n.Use(recov)
 	n.Use(NewLoggerMiddleware())
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
-	n.Use(LimitHandler(limiter))
+
+	ipLimit, err := strconv.ParseInt(os.Getenv("REQUEST_PER_MINUTES"), 10, 64)
+	if err == nil && ipLimit > 0 {
+		limiter := tollbooth.NewLimiter(ipLimit, time.Minute)
+		if false {
+			n.Use(LimitHandler(limiter))
+		}
+	}
+
+	n.Use(cors.Default())
 	n.UseHandler(r)
 
 	listenAddr := os.Getenv("LISTEN_ADDRESS")

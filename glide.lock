@@ -1,8 +1,8 @@
 hash: a21f3f193dfb87c02a364589d1bd8874dc4ce1fdf59c5693cb17eb4c73424cdf
-updated: 2016-12-26T17:34:00.853655177+01:00
+updated: 2017-01-11T12:31:25.286566713+01:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 9a0c8a57d9bb717d481bc91f995df80d9bb9238c
+  version: 8649d278323ebf6bd20c9cd56ecb152b1c617375
   subpackages:
   - aws
   - aws/awserr
@@ -36,23 +36,29 @@ imports:
 - name: github.com/go-ini/ini
   version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
 - name: github.com/iotaledger/iota.lib.go
-  version: 16e1773c1142690ecff21478eb82e5234faaec18
+  version: 3485e6986fb641a5f4f81a6e1815dcb0e0ae67b3
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/julienschmidt/httprouter
-  version: 5dd70ee059943e81987a817fa1a755b11dd119c1
+  version: 8a45e95fc75cb77048068a62daed98cc22fdac7c
 - name: github.com/oleiade/lane
   version: 28f7c3f09254f12b51e620fa4db136ba58804762
+- name: github.com/rs/cors
+  version: a62a804a8a009876ca59105f7899938a1349f4b3
+- name: github.com/rs/xhandler
+  version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/satori/go.uuid
   version: b061729afc07e77a8aa4fad0a2fd840958f1942a
 - name: github.com/uber-go/atomic
   version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
 - name: github.com/uber-go/zap
   version: a5783ee4b216a927da8f839c45cfbf9d694e1467
+  subpackages:
+  - zwrap
 - name: github.com/urfave/negroni
-  version: cd9734011043904139c24dbad9a71b21f1586f36
+  version: 46eece4d3b43dd330e141b20adf0ce9b2b35ba53
 - name: golang.org/x/net
-  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
+  version: 60c41d1de8da134c05b7b40154a9a82bf5b7edb9
   subpackages:
   - context
 - name: golang.org/x/time
