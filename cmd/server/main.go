@@ -37,6 +37,10 @@ type App struct {
 	jobStore     job.JobStore
 }
 
+const (
+	V1BasePath = "/api/v1"
+)
+
 type ErrorResp struct {
 	Message string `json:"message"`
 }
@@ -281,7 +285,7 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ ht
 		return
 	}
 
-	w.Header().Set("Link", "/jobs/"+id.String())
+	w.Header().Set("Link", V1BasePath+"/jobs/"+id.String())
 	err = json.NewEncoder(w).Encode(j)
 	if err != nil {
 		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
