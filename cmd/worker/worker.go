@@ -1,10 +1,14 @@
 package main
-
+/*
+#cgo LDFLAGS: -L. -lccurl
+#include <ccurl/ccurl.h>
+*/
+import "C"
 import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
+	//"os/exec"
 	"strconv"
 	"time"
 
@@ -48,6 +52,7 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 			return
 		}
 
+		/*
 		cmd := exec.CommandContext(ctx, app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
 		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
 		out, err := cmd.Output()
@@ -60,8 +65,10 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 			app.failJob(j, err.Error())
 			return
 		}
+		*/
 
-		outTrytes = append(outTrytes, string(out))
+		out := C.ccurl_pow(C.CString(ts), C.int(j.AttachToTangleRequest.MinWeightMagnitude))
+		outTrytes = append(outTrytes, string(C.GoString(out)))
 	}
 
 	j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
@@ -98,7 +105,8 @@ func (app *App) Worker() error {
 }
 
 type App struct {
-	ccurlPath    string
+	//ccurlPath    string
+	ccurlLoopCount C.size_t
 	ccurlTimeout time.Duration
 
 	logger       zap.Logger
@@ -123,10 +131,14 @@ func main() {
 		app.logger = zap.New(zap.NewJSONEncoder())
 	}
 
-	app.ccurlPath = os.Getenv("CCURL_PATH")
-	if app.ccurlPath == "" {
-		app.logger.Fatal("$CCURL_PATH not set")
+	C.ccurl_pow_init()
+
+	app.ccurlLoopCount = 32
+	lc, err := strconv.Atoi(os.Getenv("CCURL_LOOP_COUNT"))
+	if err != nil {
+		app.ccurlLoopCount = C.size_t(lc)
 	}
+	C.ccurl_pow_set_loop_count(app.ccurlLoopCount)
 
 	if awsAccessKeyID == "" {
 		app.logger.Fatal("$AWS_ACCESS_KEY_ID not set")
@@ -175,4 +187,5 @@ func main() {
 	// XXX: add graceful shutdown
 	app.logger.Info("starting worker")
 	app.Worker()
+	C.ccurl_pow_finalize()
 }
