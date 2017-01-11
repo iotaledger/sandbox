@@ -72,6 +72,7 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 		out := C.ccurl_pow(cTrytes, C.int(j.AttachToTangleRequest.MinWeightMagnitude))
 		C.free(unsafe.Pointer(cTrytes))
 		outTrytes = append(outTrytes, string(C.GoString(out)))
+		C.free(unsafe.Pointer(out))
 	}
 
 	j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
