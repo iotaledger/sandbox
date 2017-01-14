@@ -1,4 +1,5 @@
 package main
+
 /*
 #cgo LDFLAGS: -L. -lccurl
 #include <ccurl/ccurl.h>
@@ -47,31 +48,35 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 	}
 
 	outTrytes := []string{}
+	var prevTxHash *giota.Hash = nil
+
 	for _, ts := range j.AttachToTangleRequest.Trytes {
-		if !giota.ValidTrytes(ts) {
+		if !giota.ValidTransactionTrytes(ts) {
 			app.failJob(j, "invalid trytes")
 			return
 		}
 
-		/*
-		cmd := exec.CommandContext(ctx, app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), ts)
-		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
-		out, err := cmd.Output()
-		if err != nil {
-			app.logger.Error("ccurl", zap.Error(err))
-			if err := ctx.Err(); err == context.DeadlineExceeded {
-				app.failJob(j, "job exceeded time quota")
-				return
-			}
-			app.failJob(j, err.Error())
-			return
+		trits := giota.TrytesToTrits(ts)
+		if prevTxHash == nil {
+			copy(trits[giota.TrunkTransactionTrinaryOffset:giota.TrunkTransactionTrinaryOffset+giota.TrunkTransactionTrinarySize], giota.TrytesToTrits(j.AttachToTangleRequest.TrunkTransaction))
+			copy(trits[giota.BranchTransactionTrinaryOffset:giota.BranchTransactionTrinaryOffset+giota.BranchTransactionTrinarySize], giota.TrytesToTrits(j.AttachToTangleRequest.BranchTransaction))
+		} else {
+			copy(trits[giota.TrunkTransactionTrinaryOffset:giota.TrunkTransactionTrinaryOffset+giota.TrunkTransactionTrinarySize], prevTxHash.Trits())
+			copy(trits[giota.BranchTransactionTrinaryOffset:giota.BranchTransactionTrinaryOffset+giota.BranchTransactionTrinarySize], giota.TrytesToTrits(j.AttachToTangleRequest.TrunkTransaction))
 		}
-		*/
-		cTrytes := C.CString(ts)
+
+		cTrytes := C.CString(giota.TritsToTrytes(trits))
 
 		out := C.ccurl_pow(cTrytes, C.int(j.AttachToTangleRequest.MinWeightMagnitude))
 		C.free(unsafe.Pointer(cTrytes))
-		outTrytes = append(outTrytes, string(C.GoString(out)))
+		if out == nil {
+			app.failJob(j, "pow failed")
+			return
+		}
+
+		s := C.GoString(out)
+		prevTxHash = giota.HashFromTrits(giota.TrytesToTrits(s))
+		outTrytes = append(outTrytes, s)
 		C.free(unsafe.Pointer(out))
 	}
 
@@ -111,7 +116,7 @@ func (app *App) Worker() error {
 type App struct {
 	//ccurlPath    string
 	ccurlLoopCount C.size_t
-	ccurlTimeout time.Duration
+	ccurlTimeout   time.Duration
 
 	logger       zap.Logger
 	incomingJobs job.JobQueue

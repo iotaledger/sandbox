@@ -1,8 +1,8 @@
 hash: a21f3f193dfb87c02a364589d1bd8874dc4ce1fdf59c5693cb17eb4c73424cdf
-updated: 2017-01-11T12:31:25.286566713+01:00
+updated: 2017-01-14T18:13:54.545007092+01:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 8649d278323ebf6bd20c9cd56ecb152b1c617375
+  version: 5e1afe1c0a077fb2da9b5f74232b790d99397ce8
   subpackages:
   - aws
   - aws/awserr
@@ -36,7 +36,7 @@ imports:
 - name: github.com/go-ini/ini
   version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
 - name: github.com/iotaledger/iota.lib.go
-  version: 3485e6986fb641a5f4f81a6e1815dcb0e0ae67b3
+  version: 5476773278f6d5a2445d5ce773b285bc6ee5a430
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/julienschmidt/httprouter
@@ -58,7 +58,7 @@ imports:
 - name: github.com/urfave/negroni
   version: 46eece4d3b43dd330e141b20adf0ce9b2b35ba53
 - name: golang.org/x/net
-  version: 60c41d1de8da134c05b7b40154a9a82bf5b7edb9
+  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
   - context
 - name: golang.org/x/time
