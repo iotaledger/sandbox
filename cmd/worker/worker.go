@@ -1,18 +1,12 @@
 package main
 
-/*
-#cgo LDFLAGS: -L. -lccurl
-#include <ccurl/ccurl.h>
-#include <stdlib.h>
-*/
-import "C"
 import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
-	"unsafe"
 
 	"github.com/iotaledger/sandbox/job"
 
@@ -65,19 +59,21 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 			copy(trits[giota.BranchTransactionTrinaryOffset:giota.BranchTransactionTrinaryOffset+giota.BranchTransactionTrinarySize], giota.TrytesToTrits(j.AttachToTangleRequest.TrunkTransaction))
 		}
 
-		cTrytes := C.CString(giota.TritsToTrytes(trits))
+		cTrytes := giota.TritsToTrytes(trits)
 
-		out := C.ccurl_pow(cTrytes, C.int(j.AttachToTangleRequest.MinWeightMagnitude))
-		C.free(unsafe.Pointer(cTrytes))
-		if out == nil {
-			app.failJob(j, "pow failed")
+		cmd := exec.CommandContext(ctx, app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), cTrytes)
+		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
+		out, err := cmd.Output()
+		if err != nil {
+			app.logger.Error("ccurl", zap.Error(err))
+			if err := ctx.Err(); err == context.DeadlineExceeded {
+				app.failJob(j, "job exceeded time quota")
+				return
+			}
+			app.failJob(j, err.Error())
 			return
 		}
-
-		s := C.GoString(out)
-		prevTxHash = giota.HashFromTrits(giota.TrytesToTrits(s))
-		outTrytes = append(outTrytes, s)
-		C.free(unsafe.Pointer(out))
+		outTrytes = append(outTrytes, string(out))
 	}
 
 	j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
@@ -114,9 +110,8 @@ func (app *App) Worker() error {
 }
 
 type App struct {
-	//ccurlPath    string
-	ccurlLoopCount C.size_t
-	ccurlTimeout   time.Duration
+	ccurlPath    string
+	ccurlTimeout time.Duration
 
 	logger       zap.Logger
 	incomingJobs job.JobQueue
@@ -140,14 +135,10 @@ func main() {
 		app.logger = zap.New(zap.NewJSONEncoder())
 	}
 
-	C.ccurl_pow_init()
-
-	app.ccurlLoopCount = 32
-	lc, err := strconv.Atoi(os.Getenv("CCURL_LOOP_COUNT"))
-	if err != nil {
-		app.ccurlLoopCount = C.size_t(lc)
+	app.ccurlPath = os.Getenv("CCURL_PATH")
+	if app.ccurlPath == "" {
+		app.logger.Fatal("$CCURL_PATH not set")
 	}
-	C.ccurl_pow_set_loop_count(app.ccurlLoopCount)
 
 	if awsAccessKeyID == "" {
 		app.logger.Fatal("$AWS_ACCESS_KEY_ID not set")
@@ -196,5 +187,4 @@ func main() {
 	// XXX: add graceful shutdown
 	app.logger.Info("starting worker")
 	app.Worker()
-	C.ccurl_pow_finalize()
 }
