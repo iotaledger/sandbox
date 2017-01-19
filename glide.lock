@@ -1,8 +1,8 @@
 hash: a21f3f193dfb87c02a364589d1bd8874dc4ce1fdf59c5693cb17eb4c73424cdf
-updated: 2017-01-18T01:53:28.765532814+01:00
+updated: 2017-01-19T03:57:06.979366068+01:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: cee57925ecc1aa1c91caa884b6668e2ccb291b1c
+  version: 2669c2336f87952c54c236e2fecfab3331176c79
   subpackages:
   - aws
   - aws/awserr
@@ -41,10 +41,6 @@ imports:
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/julienschmidt/httprouter
   version: 8a45e95fc75cb77048068a62daed98cc22fdac7c
-- name: github.com/lib/pq
-  version: 67c3f2a8884c9b1aac5503c8d42ae4f73a93511c
-  subpackages:
-  - oid
 - name: github.com/oleiade/lane
   version: 28f7c3f09254f12b51e620fa4db136ba58804762
 - name: github.com/rs/cors
@@ -69,4 +65,11 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
+- name: gopkg.in/mgo.v2
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+  subpackages:
+  - bson
+  - internal/json
+  - internal/sasl
+  - internal/scram
 testImports: []

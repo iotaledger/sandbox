@@ -17,6 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/didip/tollbooth"
+	"github.com/didip/tollbooth/config"
+	"github.com/didip/tollbooth/errors"
+	"github.com/didip/tollbooth/libstring"
 	giota "github.com/iotaledger/iota.lib.go"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
@@ -27,14 +30,44 @@ import (
 )
 
 type App struct {
-	iriURI    string
-	iriClient *giota.API
-	router    *httprouter.Router
+	iriURI     string
+	iriClient  *giota.API
+	router     *httprouter.Router
+	cmdLimiter *CmdLimiter
+	jobMaxAge  time.Duration
 
 	logger       zap.Logger
 	incomingJobs job.JobQueue
 	finishedJobs job.JobQueue
 	jobStore     job.JobStore
+}
+
+type CmdLimiter struct {
+	limiters map[string]*config.Limiter
+	fallback *config.Limiter
+}
+
+func NewCmdLimiter(limits map[string]int64, def int64) *CmdLimiter {
+	limiters := map[string]*config.Limiter{}
+	for k, v := range limits {
+		limiters[k] = tollbooth.NewLimiter(v, 1*time.Minute)
+	}
+
+	defLim := tollbooth.NewLimiter(def, 1*time.Minute)
+	clim := &CmdLimiter{fallback: defLim, limiters: limiters}
+
+	return clim
+}
+
+func (c *CmdLimiter) Limit(cmd string, r *http.Request) *errors.HTTPError {
+	l, ok := c.limiters[cmd]
+	remoteIP := libstring.RemoteIP(c.fallback.IPLookups, r)
+	keys := []string{remoteIP, cmd}
+	if !ok { // Use fallback if cmd was not found.
+		return tollbooth.LimitByKeys(c.fallback, keys)
+	}
+
+	return tollbooth.LimitByKeys(l, keys)
 }
 
 const (
@@ -45,7 +78,7 @@ type ErrorResp struct {
 	Message string `json:"message"`
 }
 
-func (app *App) writeError(w http.ResponseWriter, code int, e ErrorResp) {
+func writeError(w http.ResponseWriter, code int, e ErrorResp) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	err := json.NewEncoder(w).Encode(e)
@@ -59,25 +92,25 @@ func (app *App) PostCommandsGetNodeInfo(w http.ResponseWriter, b []byte, _ httpr
 	gnir := &giota.GetNodeInfoRequest{}
 	err := json.Unmarshal(b, gnir)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if gnir.Command != "getNodeInfo" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gnir.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gnir.Command})
 		return
 	}
 
 	gni, err := app.iriClient.GetNodeInfo()
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetNodeInfo"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(gni)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -86,25 +119,25 @@ func (app *App) PostCommandsGetTips(w http.ResponseWriter, b []byte, _ httproute
 	gtr := &giota.GetTipsRequest{}
 	err := json.Unmarshal(b, gtr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if gtr.Command != "getTips" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gtr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gtr.Command})
 		return
 	}
 
 	gt, err := app.iriClient.GetTips()
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetTips"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(gt)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -113,25 +146,25 @@ func (app *App) PostCommandsFindTransactions(w http.ResponseWriter, b []byte, _ 
 	ftr := &giota.FindTransactionsRequest{}
 	err := json.Unmarshal(b, ftr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if ftr.Command != "findTransactions" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + ftr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + ftr.Command})
 		return
 	}
 
 	ft, err := app.iriClient.FindTransactions(ftr)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "FindTransactions"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(ft)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -140,25 +173,25 @@ func (app *App) PostCommandsGetTrytes(w http.ResponseWriter, b []byte, _ httprou
 	gtr := &giota.GetTrytesRequest{}
 	err := json.Unmarshal(b, gtr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if gtr.Command != "getTrytes" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gtr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gtr.Command})
 		return
 	}
 
 	gt, err := app.iriClient.GetTrytes(gtr)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetTrytes"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(gt)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -167,25 +200,25 @@ func (app *App) PostCommandsGetInclusionStates(w http.ResponseWriter, b []byte, 
 	gisr := &giota.GetInclusionStatesRequest{}
 	err := json.Unmarshal(b, gisr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if gisr.Command != "getInclusionStates" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gisr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gisr.Command})
 		return
 	}
 
 	gis, err := app.iriClient.GetInclusionStates(gisr)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetInclusionStates"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(gis)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -194,25 +227,25 @@ func (app *App) PostCommandsGetBalances(w http.ResponseWriter, b []byte, _ httpr
 	gbr := &giota.GetBalancesRequest{}
 	err := json.Unmarshal(b, gbr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if gbr.Command != "getBalances" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gbr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gbr.Command})
 		return
 	}
 
 	gb, err := app.iriClient.GetBalances(gbr)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetBalances"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(gb)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -221,25 +254,25 @@ func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, b []
 	gttar := &giota.GetTransactionsToApproveRequest{}
 	err := json.Unmarshal(b, gttar)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if gttar.Command != "getTransactionsToApprove" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gttar.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + gttar.Command})
 		return
 	}
 
 	gtta, err := app.iriClient.GetTransactionsToApprove(gttar)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetTransactionsToApprove"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(gtta)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -257,17 +290,17 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ ht
 	attr := &giota.AttachToTangleRequest{}
 	err := json.Unmarshal(b, attr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if attr.Command != "attachToTangle" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + attr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + attr.Command})
 		return
 	}
 
 	if len(attr.Trytes) < 1 || !validTrytesSlice(attr.Trytes) {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid trytes"})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid trytes"})
 		return
 	}
 
@@ -275,20 +308,20 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ ht
 	j.AttachToTangleRequest = attr
 	id, err := app.jobStore.InsertJob(j)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	err = app.incomingJobs.EnqueueJob(j)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 
-	w.Header().Set("Link", V1BasePath+"/jobs/"+id.String())
+	w.Header().Set("Link", V1BasePath+"/jobs/"+id)
 	err = json.NewEncoder(w).Encode(j)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -297,25 +330,25 @@ func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, b []byt
 	btr := &giota.BroadcastTransactionsRequest{}
 	err := json.Unmarshal(b, btr)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if btr.Command != "broadcastTransactions" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + btr.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + btr.Command})
 		return
 	}
 
 	bt, err := app.iriClient.BroadcastTransactions(btr)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "BroadcastTransactions"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(bt)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -324,25 +357,25 @@ func (app *App) PostCommandsStoreTransactions(w http.ResponseWriter, b []byte, _
 	str := &giota.StoreTransactionsRequest{}
 	err := json.Unmarshal(b, str)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	if str.Command != "storeTransactions" {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + str.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + str.Command})
 		return
 	}
 
 	st, err := app.iriClient.StoreTransactions(str)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "StoreTransactions"), zap.Error(err))
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(st)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -355,20 +388,30 @@ func (app *App) PostCommands(w http.ResponseWriter, r *http.Request, _ httproute
 	lr := io.LimitReader(r.Body, 8388608) // 2^23 bytes
 	b, err := ioutil.ReadAll(lr)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 
 	cmd := &PostCommand{}
 	err = json.Unmarshal(b, cmd)
 	if err != nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: err.Error()})
 		return
+	}
+
+	auth := r.Context().Value("authorization")
+	if auth == nil || !auth.(bool) { // If we're not authenticated, then we're subjected to rate limiting.
+		app.logger.Debug("not authed")
+		limitReached := app.cmdLimiter.Limit(cmd.Command, r)
+		if limitReached != nil {
+			writeError(w, limitReached.StatusCode, ErrorResp{Message: limitReached.Message})
+			return
+		}
 	}
 
 	switch cmd.Command {
 	default:
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + cmd.Command})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + cmd.Command})
 		return
 	case "getNodeInfo":
 		app.PostCommandsGetNodeInfo(w, b, nil)
@@ -396,19 +439,22 @@ func (app *App) PostCommands(w http.ResponseWriter, r *http.Request, _ httproute
 func (app *App) GetJobsID(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id := uuid.FromStringOrNil(ps.ByName("id"))
 	if id == uuid.Nil {
-		app.writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid id"})
-
-	}
-
-	job, err := app.jobStore.SelectJob(id)
-	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid id"})
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(job)
+	j, err := app.jobStore.SelectJob(id.String())
+	if err == job.ErrJobNotFound {
+		writeError(w, http.StatusNotFound, ErrorResp{Message: err.Error()})
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(j)
 	if err != nil {
-		app.writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
 }
@@ -425,6 +471,13 @@ func (app *App) PullFinishedJobs() {
 		if err != nil {
 			app.logger.Error("updating job store", zap.Error(err))
 		}
+	}
+}
+
+func (app *App) TimeoutJobs() {
+	for {
+		app.jobStore.TimeoutJobs(app.jobMaxAge)
+		time.Sleep(app.jobMaxAge)
 	}
 }
 
@@ -508,8 +561,24 @@ func main() {
 	}
 	app.finishedJobs = fin
 
-	s := job.NewMemoryStore()
-	app.jobStore = s
+	jobMaxAge, err := time.ParseDuration(os.Getenv("JOB_MAX_AGE"))
+	if err == nil {
+		app.jobMaxAge = jobMaxAge
+	} else {
+		app.jobMaxAge = 5 * time.Minute
+	}
+
+	mgURI := os.Getenv("MONGO_URI")
+	var js job.JobStore
+	if mgURI != "" {
+		js, err = job.NewMongoStore(mgURI, "sandbox")
+		if err != nil {
+			app.logger.Fatal("init job store", zap.Error(err))
+		}
+	} else {
+		js = job.NewMemoryStore()
+	}
+	app.jobStore = js
 
 	r := httprouter.New()
 	r.POST("/api/v1/commands", app.PostCommands)
@@ -520,6 +589,9 @@ func main() {
 		app.logger.Fatal("standardize zap logger", zap.Error(err))
 	}
 
+	// XXX: Make this configurable.
+	app.cmdLimiter = NewCmdLimiter(map[string]int64{"attachToTangle": 1}, 5)
+
 	n := negroni.New()
 
 	recov := negroni.NewRecovery()
@@ -529,12 +601,26 @@ func main() {
 	n.Use(NewLoggerMiddleware())
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
 
-	ipLimit, err := strconv.ParseInt(os.Getenv("REQUESTS_PER_MINUTE"), 10, 64)
-	if err == nil && ipLimit > 0 {
-		limiter := tollbooth.NewLimiter(ipLimit, time.Minute)
-		if false {
-			n.Use(LimitHandler(limiter))
+	var as AuthStore
+	if mgURI != "" {
+		as, err = NewMongoStore(mgURI, "sandbox")
+		if err != nil {
+			app.logger.Fatal("init auth store", zap.Error(err))
 		}
+	} else {
+		as, err = NewDummyStore()
+		if err != nil {
+			app.logger.Fatal("init auth store", zap.Error(err))
+		}
+	}
+
+	auth := NewAuthMiddleware(as)
+	n.Use(auth)
+
+	hardLimit, err := strconv.ParseInt(os.Getenv("REQUESTS_PER_MINUTE"), 10, 64)
+	if err == nil && hardLimit > 0 {
+		limiter := tollbooth.NewLimiter(hardLimit, time.Minute)
+		n.Use(LimitHandler(limiter))
 	}
 
 	n.Use(cors.Default())
@@ -553,7 +639,7 @@ func main() {
 	}
 
 	go app.PullFinishedJobs()
-
+	go app.TimeoutJobs()
 	app.logger.Info("starting listener")
 	app.logger.Fatal("ListenAndServe", zap.Error(srv.ListenAndServe()))
 }

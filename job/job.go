@@ -21,20 +21,20 @@ const (
 )
 
 type IRIJob struct {
-	ID                    uuid.UUID                     `json:"id"`
+	ID                    string                        `json:"id"`
 	Status                JobStatus                     `json:"status"`
-	CreatedAt             int64                         `json:"createdAt"`
-	StartedAt             *int64                        `json:"startedAt"`
-	FinishedAt            *int64                        `json:"finishedAt"`
+	CreatedAt             int64                         `json:"createdAt" bson:"createdAt"`
+	StartedAt             *int64                        `json:"startedAt" bson:"startedAt"`
+	FinishedAt            *int64                        `json:"finishedAt" bson:"finishedAt"`
 	Command               string                        `json:"command"`
-	AttachToTangleRequest *giota.AttachToTangleRequest  `json:"attachToTangleRequest,omitempty"`
-	AttachToTangleRespose *giota.AttachToTangleResponse `json:"attachToTangleResponse,omitempty"`
+	AttachToTangleRequest *giota.AttachToTangleRequest  `json:"attachToTangleRequest,omitempty" bson:"attachToTangleRequest"`
+	AttachToTangleRespose *giota.AttachToTangleResponse `json:"attachToTangleResponse,omitempty" bson:"attachToTangleRespose"`
 	Error                 *JobError                     `json:"error,omitempty"`
 }
 
 func (ij *IRIJob) UnmarshalJSON(data []byte) error {
 	var aux struct {
-		ID                    uuid.UUID                     `json:"id"`
+		ID                    string                        `json:"id"`
 		Status                JobStatus                     `json:"status"`
 		CreatedAt             int64                         `json:"createdAt"`
 		StartedAt             *int64                        `json:"startedAt"`
@@ -74,7 +74,7 @@ func (ij *IRIJob) UnmarshalJSON(data []byte) error {
 
 func NewIRIJob(cmd string) *IRIJob {
 	return &IRIJob{
-		ID:        uuid.NewV4(),
+		ID:        uuid.NewV4().String(),
 		Status:    JobStatusQueued,
 		CreatedAt: time.Now().Unix(),
 		Command:   cmd,
