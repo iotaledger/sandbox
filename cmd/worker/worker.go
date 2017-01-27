@@ -61,8 +61,8 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 
 		cTrytes := giota.TritsToTrytes(trits)
 
+		s := time.Now()
 		cmd := exec.CommandContext(ctx, app.ccurlPath, strconv.FormatInt(j.AttachToTangleRequest.MinWeightMagnitude, 10), cTrytes)
-		app.logger.Debug("exec.Command", zap.String("path", cmd.Path), zap.Object("args", cmd.Args))
 		out, err := cmd.Output()
 		if err != nil {
 			app.logger.Error("ccurl", zap.Error(err))
@@ -73,7 +73,11 @@ func (app *App) HandleAttachToTangle(ctx context.Context, j *job.IRIJob) {
 			app.failJob(j, err.Error())
 			return
 		}
-		outTrytes = append(outTrytes, string(out))
+
+		outStr := string(out)
+		prevTxHash = giota.HashFromTrits(giota.TrytesToTrits(outStr))
+		app.logger.Info("runtime", zap.Duration("ccurl", time.Since(s)))
+		outTrytes = append(outTrytes, outStr)
 	}
 
 	j.AttachToTangleRespose = &giota.AttachToTangleResponse{Trytes: outTrytes}
