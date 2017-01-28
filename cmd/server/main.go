@@ -318,12 +318,15 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ ht
 		return
 	}
 
+	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Link", V1BasePath+"/jobs/"+id)
 	err = json.NewEncoder(w).Encode(j)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
+
+	return
 }
 
 func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, b []byte, _ httprouter.Params) {
@@ -623,7 +626,12 @@ func main() {
 		n.Use(LimitHandler(limiter))
 	}
 
-	n.Use(cors.Default())
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+	})
+	n.Use(c)
 	n.UseHandler(r)
 
 	listenAddr := os.Getenv("LISTEN_ADDRESS")
