@@ -2,26 +2,30 @@ package main
 
 import (
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/uber-go/zap"
 	"github.com/urfave/negroni"
+	"go.uber.org/zap"
 )
 
 type LoggerMiddleware struct {
-	logger zap.Logger
+	logger *zap.Logger
 }
 
-func NewLoggerMiddleware() *LoggerMiddleware {
+func NewLoggerMiddleware(l *zap.Logger) (*LoggerMiddleware, error) {
 	mw := &LoggerMiddleware{}
-	if os.Getenv("DEBUG") == "1" {
-		mw.logger = zap.New(zap.NewJSONEncoder(), zap.DebugLevel)
+
+	if l == nil {
+		logger, err := zap.NewDevelopment()
+		if err != nil {
+			return nil, err
+		}
+		mw.logger = logger
 	} else {
-		mw.logger = zap.New(zap.NewJSONEncoder())
+		mw.logger = l
 	}
 
-	return mw
+	return mw, nil
 }
 
 func (mw *LoggerMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {

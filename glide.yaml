@@ -3,7 +3,8 @@ import:
 - package: github.com/iotaledger/iota.lib.go
 - package: github.com/julienschmidt/httprouter
 - package: github.com/satori/go.uuid
-- package: github.com/uber-go/zap
+- package: go.uber.org/zap
+- package: github.com/didip/tollbooth
+- package: github.com/aws/aws-sdk-go
 - package: github.com/urfave/negroni
 - package: github.com/oleiade/lane
-  version: ^1.0.0

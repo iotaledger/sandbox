@@ -1,8 +1,8 @@
-hash: a21f3f193dfb87c02a364589d1bd8874dc4ce1fdf59c5693cb17eb4c73424cdf
-updated: 2017-01-19T03:57:06.979366068+01:00
+hash: 1f7625a869f1f95601690cc23c86760f24fc5302d7ecf99eb18fa287aa8a49c5
+updated: 2017-03-30T18:19:39.718423334+02:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 2669c2336f87952c54c236e2fecfab3331176c79
+  version: 984e0dce0a464c7906d1526e635bf7841bc2e7c3
   subpackages:
   - aws
   - aws/awserr
@@ -28,19 +28,19 @@ imports:
   - service/sqs
   - service/sts
 - name: github.com/didip/tollbooth
-  version: 605330a2a1a74c6535f5a4d5e8ddab4e024015c4
+  version: de229036b78daed1a011b643519bde8d12f36411
   subpackages:
   - config
   - errors
   - libstring
 - name: github.com/go-ini/ini
-  version: 766e555c68dc8bda90d197ee8946c37519c19409
+  version: e7fea39b01aea8d5671f6858f0532f56e8bff3a5
 - name: github.com/iotaledger/iota.lib.go
-  version: 5476773278f6d5a2445d5ce773b285bc6ee5a430
+  version: d306d8f3d52cc5000f79936b8d4d31f2dc1c99a8
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/julienschmidt/httprouter
-  version: 8a45e95fc75cb77048068a62daed98cc22fdac7c
+  version: 6f3f3919c8781ce5c0509c83fffc887a7830c938
 - name: github.com/oleiade/lane
   version: 28f7c3f09254f12b51e620fa4db136ba58804762
 - name: github.com/rs/cors
@@ -48,17 +48,24 @@ imports:
 - name: github.com/rs/xhandler
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/satori/go.uuid
-  version: b061729afc07e77a8aa4fad0a2fd840958f1942a
-- name: github.com/uber-go/atomic
-  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+  version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
 - name: github.com/uber-go/zap
-  version: a5783ee4b216a927da8f839c45cfbf9d694e1467
-  subpackages:
-  - zwrap
+  version: e33fbf63945229e7e100a4efb11d5cd706800445
 - name: github.com/urfave/negroni
-  version: b0a6f4500e67c3e53f2d1563cca1563ab9777533
+  version: c0db5feaa33826cd5117930c8f4ee5c0f565eec6
+- name: go.uber.org/atomic
+  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+- name: go.uber.org/zap
+  version: e33fbf63945229e7e100a4efb11d5cd706800445
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - internal/multierror
+  - zapcore
 - name: golang.org/x/net
-  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
+  version: f315505cf3349909cdf013ea56690da34e96a451
   subpackages:
   - context
 - name: golang.org/x/time

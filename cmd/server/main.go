@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -24,9 +25,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 	uuid "github.com/satori/go.uuid"
-	"github.com/uber-go/zap"
-	"github.com/uber-go/zap/zwrap"
 	"github.com/urfave/negroni"
+	"go.uber.org/zap"
 )
 
 type App struct {
@@ -36,7 +36,7 @@ type App struct {
 	cmdLimiter *CmdLimiter
 	jobMaxAge  time.Duration
 
-	logger       zap.Logger
+	logger       *zap.Logger
 	incomingJobs job.JobQueue
 	finishedJobs job.JobQueue
 	jobStore     job.JobStore
@@ -182,7 +182,7 @@ func (app *App) PostCommandsGetTrytes(w http.ResponseWriter, b []byte, _ httprou
 		return
 	}
 
-	gt, err := app.iriClient.GetTrytes(gtr)
+	gt, err := app.iriClient.GetTrytes(gtr.Hashes)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetTrytes"), zap.Error(err))
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
@@ -209,7 +209,7 @@ func (app *App) PostCommandsGetInclusionStates(w http.ResponseWriter, b []byte, 
 		return
 	}
 
-	gis, err := app.iriClient.GetInclusionStates(gisr)
+	gis, err := app.iriClient.GetInclusionStates(gisr.Transactions, gisr.Tips)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetInclusionStates"), zap.Error(err))
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
@@ -236,7 +236,7 @@ func (app *App) PostCommandsGetBalances(w http.ResponseWriter, b []byte, _ httpr
 		return
 	}
 
-	gb, err := app.iriClient.GetBalances(gbr)
+	gb, err := app.iriClient.GetBalances(gbr.Addresses, gbr.Threshold)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetBalances"), zap.Error(err))
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
@@ -263,7 +263,7 @@ func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, b []
 		return
 	}
 
-	gtta, err := app.iriClient.GetTransactionsToApprove(gttar)
+	gtta, err := app.iriClient.GetTransactionsToApprove(gttar.Depth)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "GetTransactionsToApprove"), zap.Error(err))
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
@@ -277,9 +277,9 @@ func (app *App) PostCommandsGetTransactionsToApprove(w http.ResponseWriter, b []
 	}
 }
 
-func validTrytesSlice(ts []string) bool {
+func validTrytesSlice(ts []giota.Trytes) bool {
 	for _, t := range ts {
-		if !giota.ValidTrytes(t) {
+		if t.IsValid() != nil {
 			return false
 		}
 	}
@@ -299,7 +299,7 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ ht
 		return
 	}
 
-	if len(attr.Trytes) < 1 || !validTrytesSlice(attr.Trytes) {
+	if len(attr.Trytes) < 1 {
 		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid trytes"})
 		return
 	}
@@ -342,14 +342,14 @@ func (app *App) PostCommandsBroadcastTransactions(w http.ResponseWriter, b []byt
 		return
 	}
 
-	bt, err := app.iriClient.BroadcastTransactions(btr)
+	err = app.iriClient.BroadcastTransactions(btr.Trytes)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "BroadcastTransactions"), zap.Error(err))
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(bt)
+	err = json.NewEncoder(w).Encode(struct{}{})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
@@ -369,14 +369,14 @@ func (app *App) PostCommandsStoreTransactions(w http.ResponseWriter, b []byte, _
 		return
 	}
 
-	st, err := app.iriClient.StoreTransactions(str)
+	err = app.iriClient.StoreTransactions(str.Trytes)
 	if err != nil {
 		app.logger.Error("iri client", zap.String("callee", "StoreTransactions"), zap.Error(err))
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "failed to talk to IRI"})
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(st)
+	err = json.NewEncoder(w).Encode(struct{}{})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
@@ -462,6 +462,32 @@ func (app *App) GetJobsID(w http.ResponseWriter, r *http.Request, ps httprouter.
 	}
 }
 
+type APIStatus struct {
+	IRIReachable bool `json:"iriReachable"`
+	JobStats     struct {
+		Since       int64   `json:"since"`
+		Processed   int64   `json:"processed"`
+		FailureRate float64 `json:"failureRate"`
+	} `json:"jobStats"`
+}
+
+func (app *App) GetAPIStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	_, err := app.iriClient.GetNodeInfo()
+	s := &APIStatus{}
+	t := time.Now().Add(-1 * time.Hour)
+	count, rate := app.jobStore.JobFailureRate(-1 * time.Hour)
+	s.JobStats.Since = t.Unix()
+	s.JobStats.Processed = count
+	s.JobStats.FailureRate = rate
+	s.IRIReachable = err == nil
+
+	err = json.NewEncoder(w).Encode(s)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
+		return
+	}
+}
+
 func (app *App) PullFinishedJobs() {
 	for {
 		j, err := app.finishedJobs.DequeueJob()
@@ -469,7 +495,7 @@ func (app *App) PullFinishedJobs() {
 			app.logger.Debug("got no new finished jobs")
 			continue
 		}
-		app.logger.Debug("got new finished job", zap.Object("job", j))
+		app.logger.Debug("got new finished job", zap.Any("job", j))
 		_, err = app.jobStore.UpdateJob(j.ID, j)
 		if err != nil {
 			app.logger.Error("updating job store", zap.Error(err))
@@ -478,9 +504,9 @@ func (app *App) PullFinishedJobs() {
 }
 
 func (app *App) TimeoutJobs() {
-	for {
+	t := time.NewTicker(app.jobMaxAge)
+	for _ = range t.C {
 		app.jobStore.TimeoutJobs(app.jobMaxAge)
-		time.Sleep(app.jobMaxAge)
 	}
 }
 
@@ -500,15 +526,23 @@ func main() {
 	}
 
 	if os.Getenv("DEBUG") == "1" {
-		app.logger = zap.New(zap.NewJSONEncoder(), zap.DebugLevel)
+		logger, err := zap.NewDevelopment()
+		if err != nil {
+			log.Fatalf("failed to initialize logger: %s", err)
+		}
+		app.logger = logger
 	} else {
-		app.logger = zap.New(zap.NewJSONEncoder())
+		logger, err := zap.NewProduction()
+		if err != nil {
+			log.Fatalf("failed to initialize logger: %s", err)
+		}
+		app.logger = logger
 	}
 
 	// Transport for the client that talks to the IRI instance(s).
 	tr := &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout:   5 * time.Second,
+			Timeout:   10 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
 		MaxIdleConns:          100,
@@ -520,11 +554,7 @@ func main() {
 		Transport: tr,
 	}
 
-	ic, err := giota.NewAPI(app.iriURI, client)
-	if err != nil {
-		app.logger.Fatal("initializing IRI API client", zap.Error(err))
-	}
-	app.iriClient = ic
+	app.iriClient = giota.NewAPI(app.iriURI, client)
 
 	if awsAccessKeyID == "" {
 		app.logger.Fatal("$AWS_ACCESS_KEY_ID not set")
@@ -586,11 +616,7 @@ func main() {
 	r := httprouter.New()
 	r.POST("/api/v1/commands", app.PostCommands)
 	r.GET("/api/v1/jobs/:id", app.GetJobsID)
-
-	recovLogger, err := zwrap.Standardize(app.logger, zap.ErrorLevel)
-	if err != nil {
-		app.logger.Fatal("standardize zap logger", zap.Error(err))
-	}
+	r.GET("/api/v1/status", app.GetAPIStatus)
 
 	// XXX: Make this configurable.
 	app.cmdLimiter = NewCmdLimiter(map[string]int64{"attachToTangle": 1}, 5)
@@ -599,9 +625,12 @@ func main() {
 
 	recov := negroni.NewRecovery()
 	recov.PrintStack = false
-	recov.Logger = recovLogger
 	n.Use(recov)
-	n.Use(NewLoggerMiddleware())
+	lm, err := NewLoggerMiddleware(app.logger)
+	if err != nil {
+		app.logger.Fatal("init logger middleware", zap.Error(err))
+	}
+	n.Use(lm)
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
 
 	var as AuthStore
@@ -642,8 +671,8 @@ func main() {
 	srv := &http.Server{
 		Handler:      n,
 		Addr:         listenAddr,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	go app.PullFinishedJobs()

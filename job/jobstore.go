@@ -2,6 +2,7 @@ package job
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ type JobStore interface {
 	SelectJob(string) (*IRIJob, error)
 	UpdateJob(string, *IRIJob) (*IRIJob, error)
 	TimeoutJobs(time.Duration) error
+	JobFailureRate(time.Duration) (int64, float64)
 }
 
 var (
@@ -74,6 +76,33 @@ func (ms *MemoryStore) TimeoutJobs(d time.Duration) error {
 	}
 
 	return nil
+}
+
+func (ms *MemoryStore) JobFailureRate(d time.Duration) (int64, float64) {
+	ms.mut.Lock()
+	defer ms.mut.Unlock()
+	t := time.Now().Add(-d).Unix()
+	failed := 0.0
+	finished := 0.0
+	count := int64(0)
+
+	for k, _ := range ms.db {
+		if ms.db[k].CreatedAt >= t {
+			switch ms.db[k].Status {
+			case JobStatusFinished:
+				finished += 1.0
+			case JobStatusFailed:
+				failed += 1.0
+			}
+			count += 1
+		}
+	}
+
+	if failed+finished == 0.0 {
+		return count, 0.0
+	}
+
+	return count, failed / (failed + finished)
 }
 
 type MongoStore struct {
@@ -141,4 +170,45 @@ func (ms *MongoStore) TimeoutJobs(d time.Duration) error {
 	)
 
 	return err
+}
+
+func (ms *MongoStore) JobFailureRate(d time.Duration) (int64, float64) {
+	t := time.Now().Add(d).Unix()
+	failed := 0.0
+	finished := 0.0
+	count := int64(0)
+
+	p := ms.collection.Pipe(
+		[]bson.M{
+			{"$match": bson.M{"createdAt": bson.M{"$gte": t}}},
+			{"$group": bson.M{"_id": "$status", "counts": bson.M{"$sum": 1}}},
+		},
+	)
+	if p == nil {
+		return 0, 0.0 // ?
+	}
+
+	var s struct {
+		Status string `bson:"_id"`
+		Counts int64  `bson:"counts"`
+	}
+
+	it := p.Iter()
+
+	for it.Next(&s) {
+		fmt.Printf("s: %#v\n", s)
+		switch s.Status {
+		case JobStatusFailed:
+			failed = float64(s.Counts)
+		case JobStatusFinished:
+			finished = float64(s.Counts)
+		}
+		count += s.Counts
+	}
+
+	if failed+finished == 0.0 {
+		return count, 0.0
+	}
+
+	return count, failed / (failed + finished)
 }
