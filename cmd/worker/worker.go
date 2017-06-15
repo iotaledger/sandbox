@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -63,18 +60,17 @@ func (app *App) processTransactions(ctx context.Context, attachReq *giota.Attach
 
 		s := time.Now()
 
-		app.logger.Debug("writing pipe", zap.String("trytes", string(trits.Trytes())), zap.Int("len", len(trits.Trytes())))
-		_, err := app.ccurld.Write(string(trits.Trytes()))
+		cmd := exec.CommandContext(ctx, app.ccurlPath, strconv.Itoa(app.minWeightMagnitude), string(trits.Trytes()))
+		out, err := cmd.Output()
 		if err != nil {
-			return outTxs, err
+			app.logger.Error("ccurl", zap.Error(err))
+			if err := ctx.Err(); err == context.DeadlineExceeded {
+				return nil, fmt.Errorf("job exceeded time quota")
+			}
+			return nil, err
 		}
 
-		outS, err := app.ccurld.Read()
-		if err != nil {
-			return outTxs, err
-		}
-		app.logger.Debug("read from pipe", zap.String("out", outS))
-
+		outS := string(out)
 		outTx, err := giota.NewTransaction(giota.Trytes(outS))
 		if err != nil {
 			return outTxs, fmt.Errorf("invalid transaction after ccurl: %s", err)
@@ -159,11 +155,13 @@ func (app *App) Worker() error {
 }
 
 type App struct {
+	ccurlPath          string
+	ccurlTimeout       time.Duration
+	minWeightMagnitude int
+
 	logger                   *zap.Logger
 	finishedJobsTopic        *pubsub.Topic
 	incomingJobsSubscription *pubsub.Subscription
-
-	ccurld *ccurld
 }
 
 var (
@@ -195,99 +193,6 @@ func (app *App) initPubSub() {
 	}
 }
 
-type ccurld struct {
-	ccurlPath    string
-	ccurlTimeout time.Duration
-
-	minWeightMagnitude string
-	pipe               *os.File
-	cmd                *exec.Cmd
-}
-
-func newCcurld(cPath string, to time.Duration) (*ccurld, error) {
-	c := &ccurld{
-		ccurlPath:    cPath,
-		ccurlTimeout: to,
-	}
-
-	if _, err := os.Stat(c.ccurlPath); err != nil && os.IsNotExist(err) {
-		return nil, fmt.Errorf("expected ccurl executable but found nothing at %q", c.ccurlPath)
-	}
-
-	return c, nil
-}
-
-func (c *ccurld) Start(pipePath, mwm string) error {
-	if mwm == "" {
-		mwm = "13" // Testnet magnitude
-	}
-
-	if pipePath == "" {
-		p, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		pipePath = filepath.Join(p, "ccurld-pipe")
-	}
-
-	// Ccurld creates the pipe itself at the moment and will complain if the pipe
-	// exists already, so try to remove it.
-	if err := os.Remove(pipePath); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	cmd := exec.Command(c.ccurlPath, mwm, pipePath)
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	c.cmd = cmd
-
-	// Wait for the pipe to appear or time out.
-	fc := make(chan struct{})
-	defer close(fc)
-	go func() {
-		for {
-			if _, err := os.Stat(pipePath); err == nil {
-				fc <- struct{}{}
-				return
-			}
-		}
-	}()
-
-	select {
-	case <-fc:
-	case <-time.After(3 * time.Second):
-		return fmt.Errorf("waited 3 seconds for pipe to appear")
-	}
-
-	wp, err := os.OpenFile(pipePath, os.O_RDWR, 0600)
-	if err != nil {
-		return err
-	}
-
-	c.pipe = wp
-
-	return nil
-}
-
-func (c *ccurld) Write(s string) (int, error) {
-	return c.pipe.Write([]byte(s))
-}
-
-func (c *ccurld) Read() (string, error) {
-	outB := &bytes.Buffer{}
-	_, err := io.Copy(outB, c.pipe)
-	if err != nil {
-		return "", err
-	}
-
-	return outB.String(), nil
-}
-
-func (c *ccurld) Wait() error {
-	return c.cmd.Wait() // TODO
-}
-
 func main() {
 	app := &App{}
 
@@ -305,38 +210,26 @@ func main() {
 		app.logger = logger
 	}
 
-	// First setup the ccurld
-	ccurlPath := os.Getenv("CCURL_PATH")
-	pipePath := os.Getenv("PIPE_PATH")
-	minWeightMagnitude := os.Getenv("MIN_WEIGHT_MAGNITUDE")
+	// First setup ccurl
+	app.ccurlPath = os.Getenv("CCURL_PATH")
+	if app.ccurlPath == "" {
+		app.logger.Fatal("$CCURL_PATH not set")
+	}
 
-	ccurlTimeout := 120 * time.Second
+	mwm, err := strconv.Atoi(os.Getenv("MIN_WEIGHT_MAGNITUDE"))
+	if err != nil {
+		app.logger.Fatal("$MIN_WEIGHT_MAGNITUDE is not a valid number")
+	}
+	app.minWeightMagnitude = mwm
+
+	app.ccurlTimeout = 120 * time.Second
 	to, err := strconv.Atoi(os.Getenv("CCURL_TIMEOUT"))
 	if err == nil {
-		ccurlTimeout = time.Duration(to) * time.Second
+		app.ccurlTimeout = time.Duration(to) * time.Second
 	}
-
-	ccd, err := newCcurld(ccurlPath, ccurlTimeout)
-	if err != nil {
-		app.logger.Fatal("initializing ccurld", zap.Error(err))
-	}
-	if err := ccd.Start(pipePath, minWeightMagnitude); err != nil {
-		app.logger.Fatal("starting ccurld", zap.Error(err))
-	}
-
-	app.ccurld = ccd
 
 	app.initPubSub()
 
 	// TODO: add graceful shutdown
 	app.logger.Info("starting worker")
-	go func() {
-		err = app.Worker()
-		if err != nil {
-			app.logger.Fatal("pubsub consumer", zap.Error(err))
-		}
-	}()
-
-	app.logger.Info("starting ccurld")
-	app.logger.Fatal("ccurl daemon", zap.Error(ccd.Wait()))
 }
