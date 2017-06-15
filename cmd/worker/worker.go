@@ -232,4 +232,5 @@ func main() {
 
 	// TODO: add graceful shutdown
 	app.logger.Info("starting worker")
+	app.Worker()
 }

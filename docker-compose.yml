@@ -31,7 +31,8 @@ worker:
     - INCOMING_JOBS_SUBSCRIPTION=sandbox-incoming-sub
     - FINISHED_JOBS_TOPIC=sandbox-finished
     - FINISHED_JOBS_SUBSCRIPTION=sandbox-finished-sub 
-    - CCURL_PATH=/opt/ccurld
+    - MIN_WEIGHT_MAGNITUDE=13
+    - CCURL_PATH=/opt/ccurl
   restart: always
   privileged: true
   links:
