@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	//uuid "github.com/satori/go.uuid"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"cloud.google.com/go/datastore"
 )
 
 type Auth struct {
@@ -30,35 +30,33 @@ func (d *DummyStore) ValidToken(tok string) (bool, error) {
 	return tok != "", nil
 }
 
-type MongoStore struct {
-	session    *mgo.Session
-	collection *mgo.Collection
+type GCloudDataStore struct {
+	client *datastore.Client
 }
 
-func NewMongoStore(uri string, db string) (*MongoStore, error) {
-	session, err := mgo.Dial(uri)
+func NewGCloudDataStore() (*GCloudDataStore, error) {
+	ctx := context.Background()
+	c, err := datastore.NewClient(ctx, "")
 	if err != nil {
 		return nil, err
 	}
-	session.SetSafe(&mgo.Safe{})
-	c := session.DB(db).C("credentials")
 
-	c.EnsureIndex(mgo.Index{Key: []string{"token"}, Unique: true, DropDups: false})
-
-	m := &MongoStore{session: session, collection: c}
-
-	return m, nil
+	g := &GCloudDataStore{client: c}
+	return g, nil
 }
 
-func (m *MongoStore) ValidToken(tok string) (bool, error) {
-	var r Auth
-	err := m.collection.Find(bson.M{"active": true, "token": tok}).One(&r)
-	switch {
-	case err == mgo.ErrNotFound:
-		return false, nil
-	case err != nil:
+func (g *GCloudDataStore) ValidToken(tok string) (bool, error) {
+	ctx := context.Background()
+
+	a := &Auth{}
+	k := datastore.NameKey("Auth", tok, nil)
+	if err := g.client.Get(ctx, k, a); err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			return false, nil
+		}
+
 		return false, err
-	default:
-		return r.Active, nil
 	}
+
+	return a.Active, nil
 }

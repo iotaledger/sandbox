@@ -24,11 +24,11 @@ type IRIJob struct {
 	ID                    string                        `json:"id"`
 	Status                JobStatus                     `json:"status"`
 	CreatedAt             int64                         `json:"createdAt" bson:"createdAt"`
-	StartedAt             *int64                        `json:"startedAt" bson:"startedAt"`
-	FinishedAt            *int64                        `json:"finishedAt" bson:"finishedAt"`
+	StartedAt             int64                         `json:"startedAt,omitempty" bson:"startedAt"`
+	FinishedAt            int64                         `json:"finishedAt,omitempty" bson:"finishedAt"`
 	Command               string                        `json:"command"`
-	AttachToTangleRequest *giota.AttachToTangleRequest  `json:"attachToTangleRequest,omitempty" bson:"attachToTangleRequest"`
-	AttachToTangleRespose *giota.AttachToTangleResponse `json:"attachToTangleResponse,omitempty" bson:"attachToTangleRespose"`
+	AttachToTangleRequest *giota.AttachToTangleRequest  `json:"attachToTangleRequest,omitempty" datastore:",noindex"`
+	AttachToTangleRespose *giota.AttachToTangleResponse `json:"attachToTangleResponse,omitempty" datastore:",noindex"`
 	Error                 *JobError                     `json:"error,omitempty"`
 }
 
@@ -37,11 +37,11 @@ func (ij *IRIJob) UnmarshalJSON(data []byte) error {
 		ID                    string                        `json:"id"`
 		Status                JobStatus                     `json:"status"`
 		CreatedAt             int64                         `json:"createdAt"`
-		StartedAt             *int64                        `json:"startedAt"`
-		FinishedAt            *int64                        `json:"finishedAt"`
+		StartedAt             int64                         `json:"startedAt,omitempty"`
+		FinishedAt            int64                         `json:"finishedAt,omitempty"`
 		Command               string                        `json:"command"`
-		AttachToTangleRequest *giota.AttachToTangleRequest  `json:"attachToTangleRequest,omitempty"`
-		AttachToTangleRespose *giota.AttachToTangleResponse `json:"attachToTangleResponse,omitempty"`
+		AttachToTangleRequest *giota.AttachToTangleRequest  `json:"attachToTangleRequest,omitempty" datastore:",noindex"`
+		AttachToTangleRespose *giota.AttachToTangleResponse `json:"attachToTangleResponse,omitempty" datastore:",noindex"`
 		Error                 *JobError                     `json:"error,omitempty"`
 	}
 

@@ -2,3 +2,6 @@ vendor
 *.a
 *.lib
 *.dylib
+setup.sh
+google-cloud-sdk
+ccurld-pipe

@@ -13,61 +13,32 @@ import (
 
 	"github.com/iotaledger/sandbox/job"
 
-	//"github.com/eapache/go-resiliency/breaker"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/didip/tollbooth"
-	"github.com/didip/tollbooth/config"
-	"github.com/didip/tollbooth/errors"
-	"github.com/didip/tollbooth/libstring"
 	giota "github.com/iotaledger/iota.lib.go"
+
+	"github.com/DataDog/datadog-go/statsd"
+	"go.uber.org/zap"
+
+	"cloud.google.com/go/pubsub"
+	"github.com/didip/tollbooth"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/urfave/negroni"
-	"go.uber.org/zap"
+	"golang.org/x/net/context"
 )
 
 type App struct {
-	iriURI     string
 	iriClient  *giota.API
 	router     *httprouter.Router
 	cmdLimiter *CmdLimiter
 	jobMaxAge  time.Duration
 
-	logger       *zap.Logger
-	incomingJobs job.JobQueue
-	finishedJobs job.JobQueue
-	jobStore     job.JobStore
-}
+	logger *zap.Logger
+	stats  *statsd.Client
 
-type CmdLimiter struct {
-	limiters map[string]*config.Limiter
-	fallback *config.Limiter
-}
-
-func NewCmdLimiter(limits map[string]int64, def int64) *CmdLimiter {
-	limiters := map[string]*config.Limiter{}
-	for k, v := range limits {
-		limiters[k] = tollbooth.NewLimiter(v, 1*time.Minute)
-	}
-
-	defLim := tollbooth.NewLimiter(def, 1*time.Minute)
-	clim := &CmdLimiter{fallback: defLim, limiters: limiters}
-
-	return clim
-}
-
-func (c *CmdLimiter) Limit(cmd string, r *http.Request) *errors.HTTPError {
-	l, ok := c.limiters[cmd]
-	remoteIP := libstring.RemoteIP(c.fallback.IPLookups, r)
-	keys := []string{remoteIP, cmd}
-	if !ok { // Use fallback if cmd was not found.
-		return tollbooth.LimitByKeys(c.fallback, keys)
-	}
-
-	return tollbooth.LimitByKeys(l, keys)
+	incomingJobsTopic        *pubsub.Topic
+	finishedJobsSubscription *pubsub.Subscription
+	jobStore                 job.JobStore
 }
 
 const (
@@ -312,11 +283,29 @@ func (app *App) PostCommandsAttachToTangle(w http.ResponseWriter, b []byte, _ ht
 		return
 	}
 
-	err = app.incomingJobs.EnqueueJob(j)
+	jb, err := json.Marshal(j)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: err.Error()})
 		return
 	}
+
+	ctx := context.Background()
+	r := app.incomingJobsTopic.Publish(ctx, &pubsub.Message{
+		Data: jb,
+	})
+
+	go func() {
+		_, err := r.Get(ctx)
+		if err != nil {
+			app.logger.Error("publish pubsub message", zap.Error(err))
+			j.Error = &job.JobError{Message: "unable to add job to queue"}
+			j.Status = job.JobStatusFailed
+			_, err := app.jobStore.UpdateJob(id, j)
+			if err != nil {
+				app.logger.Error("update jobStore", zap.Error(err))
+			}
+		}
+	}()
 
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Link", V1BasePath+"/jobs/"+id)
@@ -404,7 +393,6 @@ func (app *App) PostCommands(w http.ResponseWriter, r *http.Request, _ httproute
 
 	auth := r.Context().Value("authorization")
 	if auth == nil || !auth.(bool) { // If we're not authenticated, then we're subjected to rate limiting.
-		app.logger.Debug("not authed")
 		limitReached := app.cmdLimiter.Limit(cmd.Command, r)
 		if limitReached != nil {
 			writeError(w, limitReached.StatusCode, ErrorResp{Message: limitReached.Message})
@@ -414,27 +402,38 @@ func (app *App) PostCommands(w http.ResponseWriter, r *http.Request, _ httproute
 
 	switch cmd.Command {
 	default:
+		app.stats.Incr("request.command.unknown", nil, 1)
 		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid command: " + cmd.Command})
 		return
 	case "getNodeInfo":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsGetNodeInfo(w, b, nil)
 	case "getTips":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsGetTips(w, b, nil)
 	case "findTransactions":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsFindTransactions(w, b, nil)
 	case "getTrytes":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsGetTrytes(w, b, nil)
 	case "getInclusionStates":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsGetInclusionStates(w, b, nil)
 	case "getBalances":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsGetBalances(w, b, nil)
 	case "getTransactionsToApprove":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsGetTransactionsToApprove(w, b, nil)
 	case "broadcastTransactions":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsBroadcastTransactions(w, b, nil)
 	case "storeTransactions":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsStoreTransactions(w, b, nil)
 	case "attachToTangle":
+		app.stats.Incr("request.command."+cmd.Command, nil, 1)
 		app.PostCommandsAttachToTangle(w, b, nil)
 	}
 }
@@ -445,6 +444,8 @@ func (app *App) GetJobsID(w http.ResponseWriter, r *http.Request, ps httprouter.
 		writeError(w, http.StatusBadRequest, ErrorResp{Message: "invalid id"})
 		return
 	}
+
+	app.stats.Incr("request.jobs", nil, 1)
 
 	j, err := app.jobStore.SelectJob(id.String())
 	if err == job.ErrJobNotFound {
@@ -472,6 +473,8 @@ type APIStatus struct {
 }
 
 func (app *App) GetAPIStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	app.stats.Incr("request.status", nil, 1)
+
 	_, err := app.iriClient.GetNodeInfo()
 	s := &APIStatus{}
 	t := time.Now().Add(-1 * time.Hour)
@@ -488,19 +491,29 @@ func (app *App) GetAPIStatus(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 }
 
-func (app *App) PullFinishedJobs() {
-	for {
-		j, err := app.finishedJobs.DequeueJob()
-		if err != nil || j == nil {
-			app.logger.Debug("got no new finished jobs")
-			continue
+// PullFinishedJobs sets up the receiver function for the finished jobs pubsub
+// subscription.
+func (app *App) PullFinishedJobs() error {
+	ctx := context.Background()
+	err := app.finishedJobsSubscription.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+		app.logger.Debug("got new finished job")
+		j := &job.IRIJob{}
+		err := json.Unmarshal(m.Data, j)
+		if err != nil {
+			app.logger.Error("unmarshal finished job", zap.Error(err))
+			m.Ack()
+			return
 		}
-		app.logger.Debug("got new finished job", zap.Any("job", j))
+
 		_, err = app.jobStore.UpdateJob(j.ID, j)
 		if err != nil {
-			app.logger.Error("updating job store", zap.Error(err))
+			app.logger.Error("updating job store with finished job", zap.Error(err))
 		}
-	}
+
+		m.Ack()
+	})
+	app.logger.Info("finished job receiver started", zap.Error(err))
+	return err
 }
 
 func (app *App) TimeoutJobs() {
@@ -510,20 +523,71 @@ func (app *App) TimeoutJobs() {
 	}
 }
 
+// This gets the pubsub topics/subscriptions into the proper state, i.e. checks
+// if all of them are available and if not creates them.
+func (app *App) initPubSub() {
+	ctx := context.Background()
+	psClient, err := pubsub.NewClient(ctx, "")
+	if err != nil {
+		app.logger.Fatal("pubsub client", zap.Error(err))
+	}
+
+	app.incomingJobsTopic = psClient.Topic(incomingJobsTopicName)
+	ok, err := app.incomingJobsTopic.Exists(ctx)
+	if err != nil {
+		app.logger.Fatal("pubsub topic", zap.Error(err), zap.String("name", incomingJobsTopicName))
+	} else if !ok {
+		t, err := psClient.CreateTopic(ctx, incomingJobsTopicName)
+		if err != nil {
+			app.logger.Fatal("pubsub topic", zap.Error(err), zap.String("name", incomingJobsTopicName))
+		}
+		app.incomingJobsTopic = t
+	}
+
+	incSub := psClient.Subscription(incomingJobsSubscriptionName)
+	ok, err = incSub.Exists(ctx)
+	if err != nil {
+		app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", incomingJobsSubscriptionName))
+	} else if !ok {
+		_, err := psClient.CreateSubscription(ctx, incomingJobsSubscriptionName, app.incomingJobsTopic, 120*time.Second, nil)
+		if err != nil {
+			app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", incomingJobsSubscriptionName))
+		}
+	}
+
+	finTopic := psClient.Topic(finishedJobsTopicName)
+	ok, err = finTopic.Exists(ctx)
+	if err != nil {
+		app.logger.Fatal("pubsub topic", zap.Error(err), zap.String("name", finishedJobsTopicName))
+	} else if !ok {
+		_, err := psClient.CreateTopic(ctx, finishedJobsTopicName)
+		if err != nil {
+			app.logger.Fatal("pubsub topic", zap.Error(err), zap.String("name", finishedJobsTopicName))
+		}
+	}
+
+	app.finishedJobsSubscription = psClient.Subscription(finishedJobsSubscriptionName)
+	ok, err = app.finishedJobsSubscription.Exists(ctx)
+	if err != nil {
+		app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", finishedJobsSubscriptionName))
+	} else if !ok {
+		s, err := psClient.CreateSubscription(ctx, finishedJobsSubscriptionName, finTopic, 120*time.Second, nil)
+		if err != nil {
+			app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", finishedJobsSubscriptionName))
+		}
+		app.finishedJobsSubscription = s
+	}
+}
+
 var (
-	awsAccessKeyID     = os.Getenv("AWS_ACCESS_KEY_ID")
-	awsSecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-	awsRegion          = os.Getenv("AWS_REGION")
-	incomingQueueName  = os.Getenv("INCOMING_QUEUE_NAME")
-	finishedQueueName  = os.Getenv("FINISHED_QUEUE_NAME")
+	incomingJobsTopicName        = os.Getenv("INCOMING_JOBS_TOPIC")
+	finishedJobsTopicName        = os.Getenv("FINISHED_JOBS_TOPIC")
+	incomingJobsSubscriptionName = os.Getenv("INCOMING_JOBS_SUBSCRIPTION")
+	finishedJobsSubscriptionName = os.Getenv("FINISHED_JOBS_SUBSCRIPTION")
 )
 
 func main() {
 	app := &App{}
-	app.iriURI = "http://localhost:14265/"
-	if os.Getenv("IRI_URI") != "" {
-		app.iriURI = os.Getenv("IRI_URI")
-	}
 
 	if os.Getenv("DEBUG") == "1" {
 		logger, err := zap.NewDevelopment()
@@ -538,6 +602,12 @@ func main() {
 		}
 		app.logger = logger
 	}
+
+	c, err := statsd.NewBuffered("127.0.0.1:8125", 100)
+	if err != nil {
+		app.logger.Fatal("failed to create statsink", zap.Error(err))
+	}
+	app.stats = c
 
 	// Transport for the client that talks to the IRI instance(s).
 	tr := &http.Transport{
@@ -554,45 +624,9 @@ func main() {
 		Transport: tr,
 	}
 
-	app.iriClient = giota.NewAPI(app.iriURI, client)
+	app.iriClient = giota.NewAPI(os.Getenv("IRI_PROXY_URL"), client)
 
-	if awsAccessKeyID == "" {
-		app.logger.Fatal("$AWS_ACCESS_KEY_ID not set")
-	}
-	if awsSecretAccessKey == "" {
-		app.logger.Fatal("$AWS_SECRET_ACCESS_KEY not set")
-	}
-	if awsRegion == "" {
-		app.logger.Fatal("$AWS_REGION not set")
-	}
-	if incomingQueueName == "" {
-		app.logger.Fatal("$INCOMING_QUEUE_NAME not set")
-	}
-	if finishedQueueName == "" {
-		app.logger.Fatal("$FINISHED_QUEUE_NAME not set")
-	}
-
-	cred := credentials.NewStaticCredentials(awsAccessKeyID, awsSecretAccessKey, "")
-	sess := session.New(
-		&aws.Config{
-			Credentials: cred,
-			Region:      &awsRegion,
-		},
-	)
-
-	// XXX: make more resilient, ie initialize with or without err
-	// 			and retry later if the QueueUrl is empty.
-	inc, err := job.NewSQSQueue(sess, incomingQueueName)
-	if err != nil {
-		app.logger.Fatal("incoming job queue", zap.Error(err))
-	}
-	app.incomingJobs = inc
-
-	fin, err := job.NewSQSQueue(sess, finishedQueueName)
-	if err != nil {
-		app.logger.Fatal("finished job queue", zap.Error(err))
-	}
-	app.finishedJobs = fin
+	app.initPubSub()
 
 	jobMaxAge, err := time.ParseDuration(os.Getenv("JOB_MAX_AGE"))
 	if err == nil {
@@ -601,15 +635,9 @@ func main() {
 		app.jobMaxAge = 5 * time.Minute
 	}
 
-	mgURI := os.Getenv("MONGO_URI")
-	var js job.JobStore
-	if mgURI != "" {
-		js, err = job.NewMongoStore(mgURI, "sandbox")
-		if err != nil {
-			app.logger.Fatal("init job store", zap.Error(err))
-		}
-	} else {
-		js = job.NewMemoryStore()
+	js, err := job.NewGCloudDataStore()
+	if err != nil {
+		app.logger.Fatal("init job store", zap.Error(err))
 	}
 	app.jobStore = js
 
@@ -634,16 +662,9 @@ func main() {
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
 
 	var as AuthStore
-	if mgURI != "" {
-		as, err = NewMongoStore(mgURI, "sandbox")
-		if err != nil {
-			app.logger.Fatal("init auth store", zap.Error(err))
-		}
-	} else {
-		as, err = NewDummyStore()
-		if err != nil {
-			app.logger.Fatal("init auth store", zap.Error(err))
-		}
+	as, err = NewGCloudDataStore()
+	if err != nil {
+		app.logger.Fatal("init auth store", zap.Error(err))
 	}
 
 	auth := NewAuthMiddleware(as)
@@ -655,12 +676,12 @@ func main() {
 		n.Use(LimitHandler(limiter))
 	}
 
-	c := cors.New(cors.Options{
+	co := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
 	})
-	n.Use(c)
+	n.Use(co)
 	n.UseHandler(r)
 
 	listenAddr := os.Getenv("LISTEN_ADDRESS")

@@ -1,14 +1,16 @@
 package job
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	//uuid "github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"cloud.google.com/go/datastore"
 )
 
 type JobStore interface {
@@ -96,6 +98,107 @@ func (ms *MemoryStore) JobFailureRate(d time.Duration) (int64, float64) {
 			}
 			count += 1
 		}
+	}
+
+	if failed+finished == 0.0 {
+		return count, 0.0
+	}
+
+	return count, failed / (failed + finished)
+}
+
+type GCloudDataStore struct {
+	client *datastore.Client
+}
+
+func NewGCloudDataStore() (*GCloudDataStore, error) {
+	ctx := context.Background()
+	c, err := datastore.NewClient(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	g := &GCloudDataStore{client: c}
+	return g, nil
+}
+
+func (g *GCloudDataStore) InsertJob(it *IRIJob) (string, error) {
+	ctx := context.Background()
+
+	k := datastore.NameKey("Job", it.ID, nil)
+	if _, err := g.client.Put(ctx, k, it); err != nil {
+		return "", err
+	}
+
+	return it.ID, nil
+}
+
+func (g *GCloudDataStore) SelectJob(id string) (*IRIJob, error) {
+	ctx := context.Background()
+
+	it := &IRIJob{}
+	k := datastore.NameKey("Job", id, nil)
+	if err := g.client.Get(ctx, k, it); err != nil {
+		if err == datastore.ErrNoSuchEntity {
+			return nil, ErrJobNotFound
+		}
+
+		return nil, err
+	}
+
+	return it, nil
+}
+
+func (g *GCloudDataStore) UpdateJob(id string, it *IRIJob) (*IRIJob, error) {
+	if _, err := g.InsertJob(it); err != nil {
+		return nil, err
+	}
+
+	return it, nil
+}
+
+func (g *GCloudDataStore) TimeoutJobs(d time.Duration) error {
+	ctx := context.Background()
+	t := time.Now().Add(-d).Unix()
+
+	q := datastore.NewQuery("Job").Filter("CreatedAt <=", t).Filter("Status =", JobStatusQueued)
+	var ents []IRIJob
+	if _, err := g.client.GetAll(ctx, q, &ents); err != nil {
+		return err
+	}
+
+	for i := range ents {
+		ents[i].Status = JobStatusFailed
+		ents[i].Error = &JobError{Message: "timed out"}
+
+		_, _ = g.UpdateJob(ents[i].ID, &ents[i])
+	}
+
+	return nil
+}
+
+func (g *GCloudDataStore) JobFailureRate(d time.Duration) (int64, float64) {
+	ctx := context.Background()
+	t := time.Now().Add(-d).Unix()
+
+	failed := 0.0
+	finished := 0.0
+	count := int64(0)
+
+	qFail := datastore.NewQuery("Job").Filter("createdAt >=", t).Filter("jobStatus =", JobStatusFailed)
+	qFin := datastore.NewQuery("Job").Filter("createdAt >=", t).Filter("jobStatus =", JobStatusFinished)
+	qCount := datastore.NewQuery("Job").Filter("createdAt >=", t)
+
+	if cFail, err := g.client.Count(ctx, qFail); err == nil {
+		failed = float64(cFail)
+	}
+
+	if cFin, err := g.client.Count(ctx, qFin); err == nil {
+		finished = float64(cFin)
+	}
+
+	if c, err := g.client.Count(ctx, qCount); err == nil {
+		count = int64(c)
 	}
 
 	if failed+finished == 0.0 {
@@ -196,7 +299,6 @@ func (ms *MongoStore) JobFailureRate(d time.Duration) (int64, float64) {
 	it := p.Iter()
 
 	for it.Next(&s) {
-		fmt.Printf("s: %#v\n", s)
 		switch s.Status {
 		case JobStatusFailed:
 			failed = float64(s.Counts)

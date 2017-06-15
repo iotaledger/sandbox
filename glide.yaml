@@ -5,6 +5,7 @@ import:
 - package: github.com/satori/go.uuid
 - package: go.uber.org/zap
 - package: github.com/didip/tollbooth
-- package: github.com/aws/aws-sdk-go
+- package: cloud.google.com/go/datastore
+- package: cloud.google.com/go/pubsub
 - package: github.com/urfave/negroni
 - package: github.com/oleiade/lane

@@ -4,3 +4,7 @@ vendor
 *.a
 *.lib
 *.dylib
+*.json
+*.deploy
+setup.sh
+google-cloud-sdk

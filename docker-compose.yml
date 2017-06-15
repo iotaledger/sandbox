@@ -1,0 +1,46 @@
+sand:
+  build: .
+  ports:
+    - "80:8080"
+    - "443:443"
+  volumes:
+    - .:/code
+  environment:
+    - IRI_URI=http://85.93.93.110:14265
+    - PUBSUB_EMULATOR_HOST=pubsub:8085
+    - DATASTORE_EMULATOR_HOST=datastore:8432
+    - DATASTORE_PROJECT_ID=iota-sandbox
+    - INCOMING_JOBS_TOPIC=sandbox-incoming
+    - INCOMING_JOBS_SUBSCRIPTION=sandbox-incoming-sub
+    - FINISHED_JOBS_TOPIC=sandbox-finished
+    - FINISHED_JOBS_SUBSCRIPTION=sandbox-finished-sub 
+    - DEBUG=1
+  restart: always
+  links:
+    - pubsub
+    - datastore
+worker:
+  build: .
+  dockerfile: Dockerfile.worker
+  volumes:
+    - .:/code
+  environment:
+    - DEBUG=1 
+    - PUBSUB_EMULATOR_HOST=pubsub:8085
+    - INCOMING_JOBS_TOPIC=sandbox-incoming
+    - INCOMING_JOBS_SUBSCRIPTION=sandbox-incoming-sub
+    - FINISHED_JOBS_TOPIC=sandbox-finished
+    - FINISHED_JOBS_SUBSCRIPTION=sandbox-finished-sub 
+    - CCURL_PATH=/opt/ccurld
+  restart: always
+  privileged: true
+  links:
+    - pubsub
+pubsub:
+  image: knarz/pubsub-emulator
+datastore:
+  image: knarz/datastore-emulator
+#proxy:
+  #build: ./proxy
+  #ports:
+    #- "14265:14265"

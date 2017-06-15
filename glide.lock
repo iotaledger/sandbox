@@ -1,44 +1,43 @@
-hash: 1f7625a869f1f95601690cc23c86760f24fc5302d7ecf99eb18fa287aa8a49c5
-updated: 2017-03-30T18:19:39.718423334+02:00
+hash: e2a9c981db0a1f90c9e57d221f2f2e89b9f66cd6a20fbea5a7e23f876d0e3fc6
+updated: 2017-06-12T21:39:29.894498429+02:00
 imports:
-- name: github.com/aws/aws-sdk-go
-  version: 984e0dce0a464c7906d1526e635bf7841bc2e7c3
+- name: cloud.google.com/go
+  version: 57377bad3486b37af17b47230a61603794c798ae
   subpackages:
-  - aws
-  - aws/awserr
-  - aws/awsutil
-  - aws/client
-  - aws/client/metadata
-  - aws/corehandlers
-  - aws/credentials
-  - aws/credentials/ec2rolecreds
-  - aws/credentials/endpointcreds
-  - aws/credentials/stscreds
-  - aws/defaults
-  - aws/ec2metadata
-  - aws/endpoints
-  - aws/request
-  - aws/session
-  - aws/signer/v4
-  - private/protocol
-  - private/protocol/query
-  - private/protocol/query/queryutil
-  - private/protocol/rest
-  - private/protocol/xml/xmlutil
-  - service/sqs
-  - service/sts
+  - compute/metadata
+  - datastore
+  - iam
+  - internal/atomiccache
+  - internal/fields
+  - internal/version
+  - pubsub
+  - pubsub/apiv1
+- name: github.com/DataDog/datadog-go
+  version: 4bf1c1105b95d4abdfec7f2added80203dce2482
+  subpackages:
+  - statsd
 - name: github.com/didip/tollbooth
   version: de229036b78daed1a011b643519bde8d12f36411
   subpackages:
   - config
   - errors
   - libstring
-- name: github.com/go-ini/ini
-  version: e7fea39b01aea8d5671f6858f0532f56e8bff3a5
+- name: github.com/golang/protobuf
+  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
+  subpackages:
+  - proto
+  - protoc-gen-go/descriptor
+  - ptypes
+  - ptypes/any
+  - ptypes/duration
+  - ptypes/empty
+  - ptypes/struct
+  - ptypes/timestamp
+  - ptypes/wrappers
+- name: github.com/googleapis/gax-go
+  version: 9af46dd5a1713e8b5cd71106287eba3cefdde50b
 - name: github.com/iotaledger/iota.lib.go
-  version: d306d8f3d52cc5000f79936b8d4d31f2dc1c99a8
-- name: github.com/jmespath/go-jmespath
-  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+  version: d2d6bb72d1c17e6a5f6e1e0b6862f4ff4f915b44
 - name: github.com/julienschmidt/httprouter
   version: 6f3f3919c8781ce5c0509c83fffc887a7830c938
 - name: github.com/oleiade/lane
@@ -49,14 +48,12 @@ imports:
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/satori/go.uuid
   version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
-- name: github.com/uber-go/zap
-  version: e33fbf63945229e7e100a4efb11d5cd706800445
 - name: github.com/urfave/negroni
   version: c0db5feaa33826cd5117930c8f4ee5c0f565eec6
 - name: go.uber.org/atomic
-  version: 3b8db5e93c4c02efbc313e17b2e796b0914a01fb
+  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/zap
-  version: e33fbf63945229e7e100a4efb11d5cd706800445
+  version: 1550bc05539134bbf8612a35f34a79ab8bf34ee3
   subpackages:
   - buffer
   - internal/bufferpool
@@ -65,13 +62,87 @@ imports:
   - internal/multierror
   - zapcore
 - name: golang.org/x/net
-  version: f315505cf3349909cdf013ea56690da34e96a451
+  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
   subpackages:
   - context
+  - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
+- name: golang.org/x/oauth2
+  version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
+- name: golang.org/x/sync
+  version: de49d9dcd27d4f764488181bea099dfe6179bcf0
+  subpackages:
+  - semaphore
+- name: golang.org/x/text
+  version: f4b4367115ec2de254587813edaa901bc1c723a8
+  subpackages:
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
 - name: golang.org/x/time
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
+- name: google.golang.org/api
+  version: 0b0f5a5147930d092abd132cf09fafa23e8c3942
+  subpackages:
+  - googleapi/transport
+  - internal
+  - iterator
+  - option
+  - support/bundler
+  - transport
+- name: google.golang.org/appengine
+  version: 170382fa85b10b94728989dfcf6cc818b335c952
+  subpackages:
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
+  - internal/socket
+  - internal/urlfetch
+  - socket
+  - urlfetch
+- name: google.golang.org/genproto
+  version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
+  subpackages:
+  - googleapis/api/annotations
+  - googleapis/datastore/v1
+  - googleapis/iam/v1
+  - googleapis/pubsub/v1
+  - googleapis/rpc/status
+  - googleapis/type/latlng
+  - protobuf/field_mask
+- name: google.golang.org/grpc
+  version: 6914ab1e338c92da4218a23d27fcd03d0ad78d46
+  subpackages:
+  - codes
+  - credentials
+  - credentials/oauth
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - status
+  - tap
+  - transport
 - name: gopkg.in/mgo.v2
   version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
   subpackages:

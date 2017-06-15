@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox
+  labels:
+    app: sandbox
+    tier: frontend
+    role: standalone
+spec:
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+  type: LoadBalancer
+  selector:
+    app: sandbox
+    tier: frontend
+    role: standalone
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: sandbox
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: sandbox
+        tier: frontend
+        role: standalone
+    spec:
+      containers:
+      - env:
+        - name: FOO
+          value: BAR
+        - name: INCOMING_QUEUE_NAME
+          value: sandbox-incoming
+        - name: FINISHED_QUEUE_NAME
+          value: sandbox-finished
+        name: sandbox
+        image: iotaledger/sandbox
+        resources:
+          requests:
+            #cpu: 500m
+            memory: 512Mi
+        ports:
+          - containerPort: 8080
