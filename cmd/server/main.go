@@ -624,7 +624,7 @@ func main() {
 		Transport: tr,
 	}
 
-	app.iriClient = giota.NewAPI(os.Getenv("IRI_PROXY_URL"), client)
+	app.iriClient = giota.NewAPI(os.Getenv("IRI_URI"), client)
 
 	app.initPubSub()
 
