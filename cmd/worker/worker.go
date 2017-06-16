@@ -15,6 +15,7 @@ import (
 	giota "github.com/iotaledger/iota.lib.go"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 )
 
 func (app *App) failJob(j *job.IRIJob, errMsg string) {
@@ -167,13 +168,25 @@ type App struct {
 var (
 	finishedJobsTopicName        = os.Getenv("FINISHED_JOBS_TOPIC")
 	incomingJobsSubscriptionName = os.Getenv("INCOMING_JOBS_SUBSCRIPTION")
+	googleProjectID              = os.Getenv("GOOGLE_PROJECT_ID")
 )
 
-func (app *App) initPubSub() {
+func (app *App) initPubSub(credPath string) {
 	ctx := context.Background()
-	psClient, err := pubsub.NewClient(ctx, "")
-	if err != nil {
-		app.logger.Fatal("pubsub client", zap.Error(err))
+	var psClient *pubsub.Client
+
+	if credPath != "" {
+		pc, err := pubsub.NewClient(ctx, googleProjectID, option.WithServiceAccountFile(credPath))
+		if err != nil {
+			app.logger.Fatal("pubsub client", zap.Error(err))
+		}
+		psClient = pc
+	} else {
+		pc, err := pubsub.NewClient(ctx, googleProjectID)
+		if err != nil {
+			app.logger.Fatal("pubsub client", zap.Error(err))
+		}
+		psClient = pc
 	}
 
 	app.finishedJobsTopic = psClient.Topic(finishedJobsTopicName)
@@ -228,7 +241,7 @@ func main() {
 		app.ccurlTimeout = time.Duration(to) * time.Second
 	}
 
-	app.initPubSub()
+	app.initPubSub(os.Getenv("GOOGLE_CREDENTIALS_FILE"))
 
 	// TODO: add graceful shutdown
 	app.logger.Info("starting worker")

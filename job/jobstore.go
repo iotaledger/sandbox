@@ -11,6 +11,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/option"
 )
 
 type JobStore interface {
@@ -111,14 +112,24 @@ type GCloudDataStore struct {
 	client *datastore.Client
 }
 
-func NewGCloudDataStore() (*GCloudDataStore, error) {
+func NewGCloudDataStore(projectID, credPath string) (*GCloudDataStore, error) {
 	ctx := context.Background()
-	c, err := datastore.NewClient(ctx, "")
-	if err != nil {
-		return nil, err
+	var dsClient *datastore.Client
+	if credPath != "" {
+		c, err := datastore.NewClient(ctx, projectID, option.WithServiceAccountFile(credPath))
+		if err != nil {
+			return nil, err
+		}
+		dsClient = c
+	} else {
+		c, err := datastore.NewClient(ctx, projectID)
+		if err != nil {
+			return nil, err
+		}
+		dsClient = c
 	}
 
-	g := &GCloudDataStore{client: c}
+	g := &GCloudDataStore{client: dsClient}
 	return g, nil
 }
 

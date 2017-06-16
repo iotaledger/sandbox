@@ -25,6 +25,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/urfave/negroni"
 	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 )
 
 type App struct {
@@ -525,11 +526,22 @@ func (app *App) TimeoutJobs() {
 
 // This gets the pubsub topics/subscriptions into the proper state, i.e. checks
 // if all of them are available and if not creates them.
-func (app *App) initPubSub() {
+func (app *App) initPubSub(credPath string) {
 	ctx := context.Background()
-	psClient, err := pubsub.NewClient(ctx, "")
-	if err != nil {
-		app.logger.Fatal("pubsub client", zap.Error(err))
+	var psClient *pubsub.Client
+
+	if credPath != "" {
+		pc, err := pubsub.NewClient(ctx, googleProjectID, option.WithServiceAccountFile(credPath))
+		if err != nil {
+			app.logger.Fatal("pubsub client", zap.Error(err))
+		}
+		psClient = pc
+	} else {
+		pc, err := pubsub.NewClient(ctx, googleProjectID)
+		if err != nil {
+			app.logger.Fatal("pubsub client", zap.Error(err))
+		}
+		psClient = pc
 	}
 
 	app.incomingJobsTopic = psClient.Topic(incomingJobsTopicName)
@@ -584,6 +596,7 @@ var (
 	finishedJobsTopicName        = os.Getenv("FINISHED_JOBS_TOPIC")
 	incomingJobsSubscriptionName = os.Getenv("INCOMING_JOBS_SUBSCRIPTION")
 	finishedJobsSubscriptionName = os.Getenv("FINISHED_JOBS_SUBSCRIPTION")
+	googleProjectID              = os.Getenv("GOOGLE_PROJECT_ID")
 )
 
 func main() {
@@ -626,7 +639,8 @@ func main() {
 
 	app.iriClient = giota.NewAPI(os.Getenv("IRI_URI"), client)
 
-	app.initPubSub()
+	credPath := os.Getenv("GOOGLE_CREDENTIALS_FILE")
+	app.initPubSub(credPath)
 
 	jobMaxAge, err := time.ParseDuration(os.Getenv("JOB_MAX_AGE"))
 	if err == nil {
@@ -635,7 +649,7 @@ func main() {
 		app.jobMaxAge = 5 * time.Minute
 	}
 
-	js, err := job.NewGCloudDataStore()
+	js, err := job.NewGCloudDataStore(googleProjectID, credPath)
 	if err != nil {
 		app.logger.Fatal("init job store", zap.Error(err))
 	}

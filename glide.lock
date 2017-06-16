@@ -1,5 +1,5 @@
 hash: e2a9c981db0a1f90c9e57d221f2f2e89b9f66cd6a20fbea5a7e23f876d0e3fc6
-updated: 2017-06-12T21:39:29.894498429+02:00
+updated: 2017-06-17T00:28:18.059959757+02:00
 imports:
 - name: cloud.google.com/go
   version: 57377bad3486b37af17b47230a61603794c798ae
@@ -13,7 +13,7 @@ imports:
   - pubsub
   - pubsub/apiv1
 - name: github.com/DataDog/datadog-go
-  version: 4bf1c1105b95d4abdfec7f2added80203dce2482
+  version: fb3be1a38fdd8038de6b45aee442d9930fd584d0
   subpackages:
   - statsd
 - name: github.com/didip/tollbooth
