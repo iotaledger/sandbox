@@ -676,7 +676,6 @@ func main() {
 	n.Use(lm)
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
 
-	var as auth.AuthStore
 	as, err := auth.NewGCloudDataStore(googleProjectID, credPath)
 	if err != nil {
 		app.logger.Fatal("init auth store", zap.Error(err))

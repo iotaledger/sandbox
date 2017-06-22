@@ -19,7 +19,7 @@ type AuthMiddleware struct {
 	store auth.AuthStore
 }
 
-func NewAuthMiddleware(as AuthStore) *AuthMiddleware {
+func NewAuthMiddleware(as auth.AuthStore) *AuthMiddleware {
 	return &AuthMiddleware{store: as}
 }
 
@@ -44,7 +44,7 @@ func (a *AuthMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next 
 		return
 	}
 
-	auth, err := a.store.ValidToken(token)
+	auth, err := a.store.ValidToken(r.Context(), token)
 	if err != nil {
 		fmt.Printf("ValidToken error: %s\n", err)
 		writeError(w, http.StatusInternalServerError, ErrorResp{Message: "could not authenticate, please try again later"})
