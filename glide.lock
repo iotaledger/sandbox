@@ -1,5 +1,5 @@
 hash: e2a9c981db0a1f90c9e57d221f2f2e89b9f66cd6a20fbea5a7e23f876d0e3fc6
-updated: 2017-06-17T00:28:18.059959757+02:00
+updated: 2017-06-22T19:22:01.25671206+02:00
 imports:
 - name: cloud.google.com/go
   version: 57377bad3486b37af17b47230a61603794c798ae
@@ -36,6 +36,8 @@ imports:
   - ptypes/wrappers
 - name: github.com/googleapis/gax-go
   version: 9af46dd5a1713e8b5cd71106287eba3cefdde50b
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/iotaledger/iota.lib.go
   version: d2d6bb72d1c17e6a5f6e1e0b6862f4ff4f915b44
 - name: github.com/julienschmidt/httprouter
@@ -48,6 +50,10 @@ imports:
   version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/satori/go.uuid
   version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
+- name: github.com/spf13/cobra
+  version: 31694f19adeeaeb0a0e5fe95441b390d757753d2
+- name: github.com/spf13/pflag
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/urfave/negroni
   version: c0db5feaa33826cd5117930c8f4ee5c0f565eec6
 - name: go.uber.org/atomic

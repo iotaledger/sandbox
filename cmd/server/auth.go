@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/iotaledger/sandbox/auth"
 )
 
 var headerSplitter = regexp.MustCompile(`\s+`)
@@ -14,7 +16,7 @@ var headerSplitter = regexp.MustCompile(`\s+`)
 // so that handlers after it can check for the authentication status of
 // the current request.
 type AuthMiddleware struct {
-	store AuthStore
+	store auth.AuthStore
 }
 
 func NewAuthMiddleware(as AuthStore) *AuthMiddleware {

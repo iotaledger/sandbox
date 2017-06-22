@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/iotaledger/sandbox/auth"
 	"github.com/iotaledger/sandbox/job"
 
 	giota "github.com/iotaledger/iota.lib.go"
@@ -675,8 +676,8 @@ func main() {
 	n.Use(lm)
 	n.Use(ContentTypeEnforcer("application/json", "application/x-www-form-urlencoded"))
 
-	var as AuthStore
-	as, err = NewGCloudDataStore()
+	var as auth.AuthStore
+	as, err := auth.NewGCloudDataStore(googleProjectID, credPath)
 	if err != nil {
 		app.logger.Fatal("init auth store", zap.Error(err))
 	}
