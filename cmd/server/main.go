@@ -617,7 +617,11 @@ func main() {
 		app.logger = logger
 	}
 
-	c, err := statsd.NewBuffered("127.0.0.1:8125", 100)
+	sh := os.Getenv("STATSD_URI")
+	if sh == "" {
+		sh = "127.0.0.1:8125"
+	}
+	c, err := statsd.NewBuffered(sh, 100)
 	if err != nil {
 		app.logger.Fatal("failed to create statsink", zap.Error(err))
 	}
