@@ -9,3 +9,4 @@ import:
 - package: cloud.google.com/go/pubsub
 - package: github.com/urfave/negroni
 - package: github.com/oleiade/lane
+- package: github.com/rs/cors

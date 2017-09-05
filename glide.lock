@@ -1,29 +1,30 @@
-hash: e2a9c981db0a1f90c9e57d221f2f2e89b9f66cd6a20fbea5a7e23f876d0e3fc6
-updated: 2017-06-22T19:22:01.25671206+02:00
+hash: f4d6115cc2ce196225160b89ce5f45cc0f42385893aa94ed9306949b3bdf2de9
+updated: 2017-09-04T17:32:35.353912702+02:00
 imports:
 - name: cloud.google.com/go
-  version: 57377bad3486b37af17b47230a61603794c798ae
+  version: 2b74e2e25316cfd9e46b74e444cdeceb78786dc5
   subpackages:
   - compute/metadata
   - datastore
   - iam
+  - internal
   - internal/atomiccache
   - internal/fields
   - internal/version
   - pubsub
   - pubsub/apiv1
 - name: github.com/DataDog/datadog-go
-  version: fb3be1a38fdd8038de6b45aee442d9930fd584d0
+  version: b10af4b12965a1ad08d164f57d14195b4140d8de
   subpackages:
   - statsd
 - name: github.com/didip/tollbooth
-  version: de229036b78daed1a011b643519bde8d12f36411
+  version: c62d95b8416e0a966a4b1483bce7e61a3dfead01
   subpackages:
   - config
   - errors
   - libstring
 - name: github.com/golang/protobuf
-  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
+  version: 17ce1425424ab154092bbb43af630bd647f3bb0d
   subpackages:
   - proto
   - protoc-gen-go/descriptor
@@ -35,40 +36,45 @@ imports:
   - ptypes/timestamp
   - ptypes/wrappers
 - name: github.com/googleapis/gax-go
-  version: 9af46dd5a1713e8b5cd71106287eba3cefdde50b
+  version: 8c160ca1523d8eea3932fbaa494c8964b7724aa8
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/iotaledger/giota
+  version: 9706ab98324c0c89206dbf374e40272281193534
+  subpackages:
+  - cl
 - name: github.com/iotaledger/iota.lib.go
-  version: d2d6bb72d1c17e6a5f6e1e0b6862f4ff4f915b44
+  version: 9706ab98324c0c89206dbf374e40272281193534
 - name: github.com/julienschmidt/httprouter
-  version: 6f3f3919c8781ce5c0509c83fffc887a7830c938
+  version: 975b5c4c7c21c0e3d2764200bf2aa8e34657ae6e
 - name: github.com/oleiade/lane
-  version: 28f7c3f09254f12b51e620fa4db136ba58804762
+  version: 3053869314bb02cb983dc2205da8ea2abe46fa96
+- name: github.com/patrickmn/go-cache
+  version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
 - name: github.com/rs/cors
-  version: a62a804a8a009876ca59105f7899938a1349f4b3
-- name: github.com/rs/xhandler
-  version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
+  version: eabcc6af4bbe5ad3a949d36450326a2b0b9894b8
 - name: github.com/satori/go.uuid
   version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
 - name: github.com/spf13/cobra
-  version: 31694f19adeeaeb0a0e5fe95441b390d757753d2
+  version: 3c0b56b677e04926dfa835a1b3f11cd4f62f076e
 - name: github.com/spf13/pflag
-  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
+  version: 7aff26db30c1be810f9de5038ec5ef96ac41fd7c
 - name: github.com/urfave/negroni
-  version: c0db5feaa33826cd5117930c8f4ee5c0f565eec6
+  version: c262547a5086067ebe455c81db5cc52eb298ac3c
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: 1550bc05539134bbf8612a35f34a79ab8bf34ee3
+  version: 3216c4c73e8ebbafff73c456dd27143f4a7c1f94
   subpackages:
   - buffer
   - internal/bufferpool
   - internal/color
   - internal/exit
-  - internal/multierror
   - zapcore
 - name: golang.org/x/net
-  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
+  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
   subpackages:
   - context
   - context/ctxhttp
@@ -79,29 +85,30 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/oauth2
-  version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
+  version: d89af98d7c6bba047c5a2622f36bc14b8766df85
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: golang.org/x/sync
-  version: de49d9dcd27d4f764488181bea099dfe6179bcf0
+  version: f52d1811a62927559de87708c8913c1650ce4f26
   subpackages:
+  - errgroup
   - semaphore
 - name: golang.org/x/text
-  version: f4b4367115ec2de254587813edaa901bc1c723a8
+  version: bd91bbf73e9a4a801adbfb97133c992678533126
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/time
-  version: f51c12702a4d776e4c1fa9b0fabab841babae631
+  version: 8be79e1e0910c292df4e79c241bb7e8f7e725959
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: 0b0f5a5147930d092abd132cf09fafa23e8c3942
+  version: 389ac18434a93e8455f6f546845de20c5858f22f
   subpackages:
   - googleapi/transport
   - internal
@@ -109,8 +116,10 @@ imports:
   - option
   - support/bundler
   - transport
+  - transport/grpc
+  - transport/http
 - name: google.golang.org/appengine
-  version: 170382fa85b10b94728989dfcf6cc818b335c952
+  version: d9a072cfa7b9736e44311ef77b3e09d804bfa599
   subpackages:
   - internal
   - internal/app_identity
@@ -124,7 +133,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
+  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
   subpackages:
   - googleapis/api/annotations
   - googleapis/datastore/v1
@@ -134,17 +143,21 @@ imports:
   - googleapis/type/latlng
   - protobuf/field_mask
 - name: google.golang.org/grpc
-  version: 6914ab1e338c92da4218a23d27fcd03d0ad78d46
+  version: 91999f444f2aa89f2f873c8429a424701309bec4
   subpackages:
+  - balancer
   - codes
+  - connectivity
   - credentials
   - credentials/oauth
+  - grpclb/grpc_lb_v1/messages
   - grpclog
   - internal
   - keepalive
   - metadata
   - naming
   - peer
+  - resolver
   - stats
   - status
   - tap
@@ -156,4 +169,8 @@ imports:
   - internal/json
   - internal/sasl
   - internal/scram
+- name: leb.io/hashland
+  version: e13accbe55f7fa03c73c74ace4cca4c425e47260
+  subpackages:
+  - keccakpg
 testImports: []

@@ -562,7 +562,11 @@ func (app *App) initPubSub(credPath string) {
 	if err != nil {
 		app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", incomingJobsSubscriptionName))
 	} else if !ok {
-		_, err := psClient.CreateSubscription(ctx, incomingJobsSubscriptionName, app.incomingJobsTopic, 120*time.Second, nil)
+		subConfig := pubsub.SubscriptionConfig{
+			Topic:       app.incomingJobsTopic,
+			AckDeadline: 120 * time.Second,
+		}
+		_, err := psClient.CreateSubscription(ctx, incomingJobsSubscriptionName, subConfig)
 		if err != nil {
 			app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", incomingJobsSubscriptionName))
 		}
@@ -584,7 +588,11 @@ func (app *App) initPubSub(credPath string) {
 	if err != nil {
 		app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", finishedJobsSubscriptionName))
 	} else if !ok {
-		s, err := psClient.CreateSubscription(ctx, finishedJobsSubscriptionName, finTopic, 120*time.Second, nil)
+		subConfig := pubsub.SubscriptionConfig{
+			Topic:       finTopic,
+			AckDeadline: 120 * time.Second,
+		}
+		s, err := psClient.CreateSubscription(ctx, finishedJobsSubscriptionName, subConfig)
 		if err != nil {
 			app.logger.Fatal("pubsub subscription", zap.Error(err), zap.String("name", finishedJobsSubscriptionName))
 		}
@@ -696,6 +704,7 @@ func main() {
 
 	co := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
 	})
