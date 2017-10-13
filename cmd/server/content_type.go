@@ -20,6 +20,7 @@ func ContentTypeEnforcer(cts ...string) negroni.HandlerFunc {
 	return negroni.HandlerFunc(func(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 		ct := r.Header.Get(http.CanonicalHeaderKey("Content-Type"))
 		if hasCT(ct, cts) || (r.Method != "POST" && r.Method != "PUT") {
+			w.Header().Set("Content-Type", "application/json")
 			next(w, r)
 		} else {
 			http.Error(w, http.StatusText(http.StatusUnsupportedMediaType), http.StatusUnsupportedMediaType)
