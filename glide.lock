@@ -1,8 +1,8 @@
 hash: f4d6115cc2ce196225160b89ce5f45cc0f42385893aa94ed9306949b3bdf2de9
-updated: 2017-09-04T17:32:35.353912702+02:00
+updated: 2017-10-14T19:37:34.022226173+02:00
 imports:
 - name: cloud.google.com/go
-  version: 2b74e2e25316cfd9e46b74e444cdeceb78786dc5
+  version: ba2534604a6c2b8854d680e50f9132cade92d02f
   subpackages:
   - compute/metadata
   - datastore
@@ -14,17 +14,17 @@ imports:
   - pubsub
   - pubsub/apiv1
 - name: github.com/DataDog/datadog-go
-  version: b10af4b12965a1ad08d164f57d14195b4140d8de
+  version: c74bd0589c83817c93e4eff39ccae69d6c46df9b
   subpackages:
   - statsd
 - name: github.com/didip/tollbooth
-  version: c62d95b8416e0a966a4b1483bce7e61a3dfead01
+  version: b80d9db9bfe02236089a2056fa894bcf8773f539
   subpackages:
-  - config
   - errors
   - libstring
+  - limiter
 - name: github.com/golang/protobuf
-  version: 17ce1425424ab154092bbb43af630bd647f3bb0d
+  version: 130e6b02ab059e7b717a096f397c5b60111cae74
   subpackages:
   - proto
   - protoc-gen-go/descriptor
@@ -36,15 +36,15 @@ imports:
   - ptypes/timestamp
   - ptypes/wrappers
 - name: github.com/googleapis/gax-go
-  version: 8c160ca1523d8eea3932fbaa494c8964b7724aa8
+  version: 317e0006254c44a0ac427cc52a0e083ff0b9622f
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/iotaledger/giota
-  version: 9706ab98324c0c89206dbf374e40272281193534
+  version: 3c5a6aa3b8c2903bb6a1b707664928b133c2eed7
   subpackages:
   - cl
 - name: github.com/iotaledger/iota.lib.go
-  version: 9706ab98324c0c89206dbf374e40272281193534
+  version: 3c5a6aa3b8c2903bb6a1b707664928b133c2eed7
 - name: github.com/julienschmidt/httprouter
   version: 975b5c4c7c21c0e3d2764200bf2aa8e34657ae6e
 - name: github.com/oleiade/lane
@@ -56,17 +56,17 @@ imports:
 - name: github.com/satori/go.uuid
   version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
 - name: github.com/spf13/cobra
-  version: 3c0b56b677e04926dfa835a1b3f11cd4f62f076e
+  version: 7b2c5ac9fc04fc5efafb60700713d4fa609b777b
 - name: github.com/spf13/pflag
-  version: 7aff26db30c1be810f9de5038ec5ef96ac41fd7c
+  version: a9789e855c7696159b7db0db7f440b449edf2b31
 - name: github.com/urfave/negroni
-  version: c262547a5086067ebe455c81db5cc52eb298ac3c
+  version: 5bc66cf1ad89af58511e07e108a31f219ed61012
 - name: go.uber.org/atomic
   version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: 3216c4c73e8ebbafff73c456dd27143f4a7c1f94
+  version: 35aad584952c3e7020db7b839f6b102de6271f89
   subpackages:
   - buffer
   - internal/bufferpool
@@ -74,7 +74,7 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  version: a04bdaca5b32abe1c069418fb7088ae607de5bd0
   subpackages:
   - context
   - context/ctxhttp
@@ -85,30 +85,30 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/oauth2
-  version: d89af98d7c6bba047c5a2622f36bc14b8766df85
+  version: bb50c06baba3d0c76f9d125c0719093e315b5b44
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: golang.org/x/sync
-  version: f52d1811a62927559de87708c8913c1650ce4f26
+  version: 8e0aa688b654ef28caa72506fa5ec8dba9fc7690
   subpackages:
   - errgroup
   - semaphore
 - name: golang.org/x/text
-  version: bd91bbf73e9a4a801adbfb97133c992678533126
+  version: c01e4764d870b77f8abe5096ee19ad20d80e8075
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/time
-  version: 8be79e1e0910c292df4e79c241bb7e8f7e725959
+  version: 6dc17368e09b0e8634d71cac8168d853e869a0c7
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: 389ac18434a93e8455f6f546845de20c5858f22f
+  version: 9e2045da407b8bc1df9bc5c14d4d1a7e7e182e05
   subpackages:
   - googleapi/transport
   - internal
@@ -119,7 +119,7 @@ imports:
   - transport/grpc
   - transport/http
 - name: google.golang.org/appengine
-  version: d9a072cfa7b9736e44311ef77b3e09d804bfa599
+  version: a2e0dc829727a4f957a7428b1f322805cfc1f362
   subpackages:
   - internal
   - internal/app_identity
@@ -133,7 +133,7 @@ imports:
   - socket
   - urlfetch
 - name: google.golang.org/genproto
-  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
+  version: f676e0f3ac6395ff1a529ae59a6670878a8371a6
   subpackages:
   - googleapis/api/annotations
   - googleapis/datastore/v1
@@ -143,7 +143,7 @@ imports:
   - googleapis/type/latlng
   - protobuf/field_mask
 - name: google.golang.org/grpc
-  version: 91999f444f2aa89f2f873c8429a424701309bec4
+  version: c209cdff16049a924bef4aa5c6f7588f0b42b2fa
   subpackages:
   - balancer
   - codes
@@ -170,7 +170,7 @@ imports:
   - internal/sasl
   - internal/scram
 - name: leb.io/hashland
-  version: e13accbe55f7fa03c73c74ace4cca4c425e47260
+  version: 07375b562deaa8d6891f9618a04e94a0b98e2ee7
   subpackages:
   - keccakpg
 testImports: []

@@ -698,7 +698,7 @@ func main() {
 
 	hardLimit, err := strconv.ParseInt(os.Getenv("REQUESTS_PER_MINUTE"), 10, 64)
 	if err == nil && hardLimit > 0 {
-		limiter := tollbooth.NewLimiter(hardLimit, time.Minute)
+		limiter := tollbooth.NewLimiter(hardLimit, time.Minute, nil)
 		n.Use(LimitHandler(limiter))
 	}
 
