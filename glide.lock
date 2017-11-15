@@ -41,10 +41,6 @@ imports:
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/iotaledger/giota
   version: cc41675ff9ac3193925e0d0b841a850c4691484d
-  subpackages:
-  - cl
-- name: github.com/iotaledger/iota.lib.go
-  version: 3c5a6aa3b8c2903bb6a1b707664928b133c2eed7
 - name: github.com/julienschmidt/httprouter
   version: 975b5c4c7c21c0e3d2764200bf2aa8e34657ae6e
 - name: github.com/oleiade/lane

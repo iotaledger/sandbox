@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	giota "github.com/iotaledger/iota.lib.go"
+	"github.com/iotaledger/giota"
 )
 
 type IRIBalancer struct {

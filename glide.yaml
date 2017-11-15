@@ -1,6 +1,6 @@
 package: github.com/iotaledger/sandbox
 import:
-- package: github.com/iotaledger/iota.lib.go
+- package: github.com/iotaledger/giota
 - package: github.com/julienschmidt/httprouter
 - package: github.com/satori/go.uuid
 - package: go.uber.org/zap

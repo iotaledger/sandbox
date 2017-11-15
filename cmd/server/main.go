@@ -11,10 +11,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/iotaledger/giota"
 	"github.com/iotaledger/sandbox/auth"
 	"github.com/iotaledger/sandbox/job"
-
-	giota "github.com/iotaledger/iota.lib.go"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"go.uber.org/zap"
