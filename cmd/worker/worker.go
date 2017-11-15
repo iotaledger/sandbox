@@ -12,7 +12,7 @@ import (
 	"github.com/iotaledger/sandbox/job"
 
 	"cloud.google.com/go/pubsub"
-	giota "github.com/iotaledger/iota.lib.go"
+	"github.com/iotaledger/giota"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"google.golang.org/api/option"
