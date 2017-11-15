@@ -705,7 +705,7 @@ func main() {
 	co := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-IOTA-API-Version"},
 		AllowCredentials: true,
 	})
 	n.Use(co)
