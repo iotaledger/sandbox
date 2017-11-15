@@ -40,7 +40,7 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/iotaledger/giota
-  version: 3c5a6aa3b8c2903bb6a1b707664928b133c2eed7
+  version: cc41675ff9ac3193925e0d0b841a850c4691484d
   subpackages:
   - cl
 - name: github.com/iotaledger/iota.lib.go
